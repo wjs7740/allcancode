@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.DS_Store
+.env
+allcancode-api/node_modules/
+
+# Local workspace/runtime artifacts
+.agents/
+.codex/
+Codium-source-*.zip
+*.log

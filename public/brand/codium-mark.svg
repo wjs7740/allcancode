@@ -1,0 +1,15 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Codium mark</title>
+  <desc id="desc">A minimal Codium C mark with a gateway opening.</desc>
+  <defs>
+    <linearGradient id="stroke" x1="62" y1="62" x2="198" y2="194" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F7F8"/>
+      <stop offset="1" stop-color="#D8DDE2"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="60" fill="#050607"/>
+  <rect x="22" y="22" width="212" height="212" rx="50" fill="#101113"/>
+  <rect x="22.5" y="22.5" width="211" height="211" rx="49.5" stroke="#F6F7F8" stroke-opacity="0.1"/>
+  <path d="M171 76C158 66 143 61 127 61C90.55 61 61 90.55 61 127C61 163.45 90.55 193 127 193C144 193 159.5 186.6 171.2 176.1" stroke="url(#stroke)" stroke-width="30" stroke-linecap="round"/>
+  <path d="M151 127H199" stroke="#D8DDE2" stroke-width="22" stroke-linecap="round"/>
+</svg>

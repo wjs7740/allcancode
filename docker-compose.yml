@@ -1,0 +1,166 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: allcancode-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-allcancode}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-allcancode}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    container_name: allcancode-redis
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-}
+    command: >
+      sh -c '
+        redis-server
+        --save 60 1
+        --appendonly yes
+        --appendfsync everysec
+        ${REDIS_PASSWORD:+--requirepass "$REDIS_PASSWORD"}'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "if [ -n \"$REDIS_PASSWORD\" ]; then redis-cli -a \"$REDIS_PASSWORD\" ping; else redis-cli ping; fi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  sub2api:
+    build:
+      context: ./.vendor/sub2api-main
+      args:
+        POSTGRES_IMAGE: postgres:16-alpine
+    container_name: sub2api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AUTO_SETUP: "true"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      SERVER_MODE: ${SUB2API_SERVER_MODE:-release}
+      RUN_MODE: ${SUB2API_RUN_MODE:-standard}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_DBNAME: ${SUB2API_DB_NAME:-sub2api}
+      DATABASE_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: 0
+      ADMIN_EMAIL: ${SUB2API_ADMIN_EMAIL:-admin@allcancode.local}
+      ADMIN_PASSWORD: ${SUB2API_ADMIN_PASSWORD:-admin123456}
+      JWT_SECRET: ${SUB2API_JWT_SECRET:-sub2api-dev-jwt-secret-20260627-long}
+      TOTP_ENCRYPTION_KEY: ${SUB2API_TOTP_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      TZ: ${TZ:-Asia/Shanghai}
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: ${SUB2API_ALLOW_INSECURE_HTTP:-true}
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: ${SUB2API_ALLOW_PRIVATE_HOSTS:-true}
+    expose:
+      - "8080"
+    volumes:
+      - sub2api_data:/app/data
+
+  kyren-mock:
+    build:
+      context: ./docker/kyren-mock
+    container_name: allcancode-kyren-mock
+    environment:
+      PORT: 9000
+      MOCK_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      MOCK_EASYPAY_PID: ${MOCK_EASYPAY_PID:-demo-pid}
+      MOCK_EASYPAY_PKEY: ${MOCK_EASYPAY_PKEY:-demo-pkey}
+    expose:
+      - "9000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  sub2api-init:
+    build:
+      context: ./docker/sub2api-init
+    container_name: allcancode-sub2api-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sub2api:
+        condition: service_healthy
+      kyren-mock:
+        condition: service_healthy
+    environment:
+      SUB2API_URL: http://sub2api:8080
+      SUB2API_ADMIN_EMAIL: ${SUB2API_ADMIN_EMAIL:-admin@allcancode.local}
+      SUB2API_ADMIN_PASSWORD: ${SUB2API_ADMIN_PASSWORD:-admin123456}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${SUB2API_DB_NAME:-sub2api}
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      MOCK_EASYPAY_PID: ${MOCK_EASYPAY_PID:-demo-pid}
+      MOCK_EASYPAY_PKEY: ${MOCK_EASYPAY_PKEY:-demo-pkey}
+    restart: "no"
+
+  allcancode-api:
+    build:
+      context: ./allcancode-api
+    container_name: allcancode-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sub2api:
+        condition: service_healthy
+      sub2api-init:
+        condition: service_completed_successfully
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-allcancode}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-allcancode-dev-secret}
+      APP_CORS_ORIGIN: ${APP_CORS_ORIGIN:-http://localhost:8080}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      SUB2API_INTERNAL_URL: ${SUB2API_INTERNAL_URL:-http://sub2api:8080}
+      KYREN_EPAY_KEY: ${KYREN_EPAY_KEY:-demo-kyren-secret}
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  allcancode-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: allcancode-web
+    depends_on:
+      allcancode-api:
+        condition: service_healthy
+      sub2api:
+        condition: service_healthy
+      kyren-mock:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  redisdata:
+  sub2api_data:
