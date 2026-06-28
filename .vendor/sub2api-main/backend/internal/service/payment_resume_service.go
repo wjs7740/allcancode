@@ -117,6 +117,20 @@ func NormalizeVisibleMethod(method string) string {
 	return payment.GetBasePaymentType(strings.TrimSpace(method))
 }
 
+func visiblePaymentMethodOrder() []string {
+	return []string{payment.TypeAlipay, payment.TypeWxpay, payment.TypeCreditCard, payment.TypeCrypto, payment.TypePayNow}
+}
+
+func isVisiblePaymentMethod(method string) bool {
+	normalized := NormalizeVisibleMethod(method)
+	for _, candidate := range visiblePaymentMethodOrder() {
+		if normalized == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 func NormalizeVisibleMethods(methods []string) []string {
 	if len(methods) == 0 {
 		return nil
@@ -196,7 +210,7 @@ func (lb *visibleMethodLoadBalancer) GetInstanceConfig(ctx context.Context, inst
 
 func (lb *visibleMethodLoadBalancer) SelectInstance(ctx context.Context, providerKey string, paymentType payment.PaymentType, strategy payment.Strategy, orderAmount float64) (*payment.InstanceSelection, error) {
 	visibleMethod := NormalizeVisibleMethod(paymentType)
-	if providerKey != "" || (visibleMethod != payment.TypeAlipay && visibleMethod != payment.TypeWxpay) {
+	if providerKey != "" || !isVisiblePaymentMethod(visibleMethod) {
 		return lb.inner.SelectInstance(ctx, providerKey, paymentType, strategy, orderAmount)
 	}
 

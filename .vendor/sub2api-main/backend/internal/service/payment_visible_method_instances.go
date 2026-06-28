@@ -13,11 +13,16 @@ import (
 )
 
 func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []string {
-	methodSet := make(map[string]struct{}, 2)
+	visibleOrder := visiblePaymentMethodOrder()
+	visibleSet := make(map[string]struct{}, len(visibleOrder))
+	for _, method := range visibleOrder {
+		visibleSet[method] = struct{}{}
+	}
+
+	methodSet := make(map[string]struct{}, len(visibleOrder))
 	addMethod := func(method string) {
 		method = NormalizeVisibleMethod(method)
-		switch method {
-		case payment.TypeAlipay, payment.TypeWxpay:
+		if _, ok := visibleSet[method]; ok {
 			methodSet[method] = struct{}{}
 		}
 	}
@@ -52,7 +57,7 @@ func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []stri
 	}
 
 	methods := make([]string, 0, len(methodSet))
-	for _, method := range []string{payment.TypeAlipay, payment.TypeWxpay} {
+	for _, method := range visibleOrder {
 		if _, ok := methodSet[method]; ok {
 			methods = append(methods, method)
 		}
@@ -215,7 +220,7 @@ func (s *PaymentConfigService) resolveEnabledVisibleMethodInstance(
 	}
 
 	method = NormalizeVisibleMethod(method)
-	if method != payment.TypeAlipay && method != payment.TypeWxpay {
+	if !isVisiblePaymentMethod(method) {
 		return nil, nil
 	}
 

@@ -89,6 +89,7 @@ type SessionUser = {
   id: number;
   username: string;
   email: string;
+  role?: string;
   balance: number;
   createdAt: string;
 };
@@ -107,6 +108,10 @@ type DashboardSnapshot = {
 type PaymentMethodItem = {
   methodCode: string;
   methodName: string;
+  providerName?: string;
+  currency?: string;
+  singleMin?: number;
+  singleMax?: number;
 };
 
 type AuthPayload = {
@@ -786,6 +791,13 @@ function App() {
 
   const toggleLocale = () => setLocale((current) => (current === "zh" ? "en" : "zh"));
   const enterDashboard = (payload: { token: string; user: SessionUser }) => {
+    if (payload.user.role === "admin") {
+      localStorage.setItem("auth_token", payload.token);
+      localStorage.setItem("auth_user", JSON.stringify(payload.user));
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.location.assign("/admin/dashboard");
+      return;
+    }
     localStorage.setItem(TOKEN_STORAGE_KEY, payload.token);
     setSessionToken(payload.token);
     setSessionUser(payload.user);

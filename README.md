@@ -37,6 +37,7 @@ Default local admin account for `sub2api`:
 
 - Email: `admin@allcancode.local`
 - Password: `admin123456`
+- Admin users should use the original `sub2api` admin backend at `/admin/`. If an admin signs in from the AllCanCode landing page, the app bridges the session and redirects to `/admin/dashboard`.
 
 Default local user account for `allcancode`:
 
@@ -49,10 +50,17 @@ Fresh deploy bootstrap now does the following automatically:
 - enables ordinary-user registration
 - enables payment
 - creates or refreshes the default local `allcancode` demo user
-- creates or updates a local EasyPay-compatible provider for Docker demo use
-- enables visible `alipay` and `wxpay` payment methods
+- creates or updates a Kyren/EasyPay-compatible provider
+- enables visible `alipay`, `wxpay`, `creditcard`, `crypto`, and `paynow` payment methods
 
 Ordinary-user login and registration use real `sub2api` user accounts through `allcancode-api`.
+
+For production Kyren Pay, set these values in `.env` before starting Docker:
+
+- `KYREN_EASYPAY_API_BASE=https://api.kyren.top`
+- `KYREN_EASYPAY_PID=<your Kyren merchant pid>`
+- `KYREN_EASYPAY_PKEY=<your Kyren merchant key>`
+- `KYREN_EASYPAY_TYPES=alipay,wxpay,creditcard,crypto,paynow`
 
 ## Local payment demo
 

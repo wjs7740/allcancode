@@ -117,8 +117,12 @@ services:
       PGDATABASE: ${SUB2API_DB_NAME:-sub2api}
       PGUSER: ${POSTGRES_USER:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      MOCK_EASYPAY_PID: ${MOCK_EASYPAY_PID:-demo-pid}
-      MOCK_EASYPAY_PKEY: ${MOCK_EASYPAY_PKEY:-demo-pkey}
+      KYREN_EASYPAY_API_BASE: ${KYREN_EASYPAY_API_BASE:-http://kyren-mock:9000}
+      KYREN_EASYPAY_PROVIDER_NAME: ${KYREN_EASYPAY_PROVIDER_NAME:-Kyren EasyPay}
+      KYREN_EASYPAY_PID: ${KYREN_EASYPAY_PID:-demo-pid}
+      KYREN_EASYPAY_PKEY: ${KYREN_EASYPAY_PKEY:-demo-pkey}
+      KYREN_EASYPAY_PAYMENT_MODE: ${KYREN_EASYPAY_PAYMENT_MODE:-qrcode}
+      KYREN_EASYPAY_TYPES: ${KYREN_EASYPAY_TYPES:-alipay,wxpay,creditcard,crypto,paynow}
     restart: "no"
 
   allcancode-api:

@@ -7,6 +7,12 @@ ADMIN_PASSWORD="${SUB2API_ADMIN_PASSWORD:-admin123456}"
 DEMO_EMAIL="${DEMO_USER_EMAIL:-demo@allcancode.local}"
 DEMO_PASSWORD="${DEMO_USER_PASSWORD:-demo123456}"
 DEMO_USERNAME="${DEMO_USER_USERNAME:-demo}"
+KYREN_API_BASE="${KYREN_EASYPAY_API_BASE:-http://kyren-mock:9000}"
+KYREN_PROVIDER_NAME="${KYREN_EASYPAY_PROVIDER_NAME:-Kyren EasyPay}"
+KYREN_PID="${KYREN_EASYPAY_PID:-${MOCK_EASYPAY_PID:-demo-pid}}"
+KYREN_PKEY="${KYREN_EASYPAY_PKEY:-${MOCK_EASYPAY_PKEY:-demo-pkey}}"
+KYREN_PAYMENT_MODE="${KYREN_EASYPAY_PAYMENT_MODE:-qrcode}"
+KYREN_PAYMENT_TYPES="${KYREN_EASYPAY_TYPES:-alipay,wxpay,creditcard,crypto,paynow}"
 PGHOST="${PGHOST:-postgres}"
 PGPORT="${PGPORT:-5432}"
 PGDATABASE="${PGDATABASE:-sub2api}"
@@ -58,17 +64,20 @@ curl -fsS -X POST "${SUB2API_URL}/api/v1/admin/compliance/accept" \
   -d "$COMPLIANCE_PAYLOAD" >/dev/null
 
 PROVIDERS_RESPONSE=$(curl -fsS "${SUB2API_URL}/api/v1/admin/payment/providers" -H "Authorization: Bearer ${ADMIN_TOKEN}")
-PROVIDER_ID=$(printf '%s' "$PROVIDERS_RESPONSE" | jq -r '.data[]? | select(.provider_key == "easypay" and .name == "Local EasyPay Mock") | .id' | head -n 1)
+PROVIDER_ID=$(printf '%s' "$PROVIDERS_RESPONSE" | jq -r '.data[]? | select(.provider_key == "easypay" and (.name == "Kyren EasyPay" or .name == "Local EasyPay Mock")) | .id' | head -n 1)
 
 PROVIDER_PAYLOAD=$(jq -nc \
-  --arg apiBase "http://kyren-mock:9000" \
+  --arg name "$KYREN_PROVIDER_NAME" \
+  --arg apiBase "$KYREN_API_BASE" \
   --arg notifyUrl "http://allcancode-api:3001/api/app/payment/callback/sub2api" \
   --arg returnUrl "${PUBLIC_BASE_URL:-http://localhost:8080}/payment/result" \
-  --arg pid "${MOCK_EASYPAY_PID:-demo-pid}" \
-  --arg pkey "${MOCK_EASYPAY_PKEY:-demo-pkey}" \
+  --arg pid "$KYREN_PID" \
+  --arg pkey "$KYREN_PKEY" \
+  --argjson supportedTypes "$(printf '%s' "$KYREN_PAYMENT_TYPES" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')" \
+  --arg paymentMode "$KYREN_PAYMENT_MODE" \
   '{
     provider_key: "easypay",
-    name: "Local EasyPay Mock",
+    name: $name,
     config: {
       apiBase: $apiBase,
       notifyUrl: $notifyUrl,
@@ -76,11 +85,11 @@ PROVIDER_PAYLOAD=$(jq -nc \
       pid: $pid,
       pkey: $pkey
     },
-    supported_types: ["alipay", "wxpay"],
+    supported_types: $supportedTypes,
     enabled: true,
-    payment_mode: "qrcode",
+    payment_mode: $paymentMode,
     sort_order: 10,
-    limits: "{\"alipay\":{\"singleMin\":1,\"singleMax\":1000},\"wxpay\":{\"singleMin\":1,\"singleMax\":1000}}",
+    limits: "{\"alipay\":{\"singleMin\":1,\"singleMax\":1000},\"wxpay\":{\"singleMin\":1,\"singleMax\":1000},\"creditcard\":{\"singleMin\":1,\"singleMax\":1000},\"crypto\":{\"singleMin\":1,\"singleMax\":1000},\"paynow\":{\"singleMin\":1,\"singleMax\":1000}}",
     refund_enabled: false,
     allow_user_refund: false
   }')
@@ -104,11 +113,11 @@ upsert_setting "MAX_RECHARGE_AMOUNT" "1000.00"
 upsert_setting "DAILY_RECHARGE_LIMIT" "0.00"
 upsert_setting "ORDER_TIMEOUT_MINUTES" "30"
 upsert_setting "MAX_PENDING_ORDERS" "5"
-upsert_setting "ENABLED_PAYMENT_TYPES" "alipay,wxpay"
+upsert_setting "ENABLED_PAYMENT_TYPES" "$KYREN_PAYMENT_TYPES"
 upsert_setting "BALANCE_PAYMENT_DISABLED" "false"
 upsert_setting "BALANCE_RECHARGE_MULTIPLIER" "1.00"
 upsert_setting "RECHARGE_FEE_RATE" "0.00"
-upsert_setting "PAYMENT_HELP_TEXT" "Local Docker payment demo is enabled through the bundled EasyPay mock provider."
+upsert_setting "PAYMENT_HELP_TEXT" "Kyren EasyPay is enabled. Configure KYREN_EASYPAY_API_BASE, KYREN_EASYPAY_PID and KYREN_EASYPAY_PKEY for production."
 upsert_setting "payment_visible_method_alipay_enabled" "true"
 upsert_setting "payment_visible_method_alipay_source" "easypay_alipay"
 upsert_setting "payment_visible_method_wxpay_enabled" "true"

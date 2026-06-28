@@ -63,6 +63,7 @@ function toUser(user) {
     id: Number(user.id),
     username: username || email || `user-${user.id}`,
     email,
+    role: String(user.role ?? "user"),
     balance: Number(user.balance ?? 0),
     createdAt: user.created_at ?? new Date().toISOString()
   };
@@ -179,6 +180,12 @@ function methodCodeToName(methodCode) {
       return "Alipay";
     case "wxpay":
       return "WeChat Pay";
+    case "creditcard":
+      return "Credit Card";
+    case "crypto":
+      return "Crypto";
+    case "paynow":
+      return "PayNow";
     case "card":
       return "Card";
     case "link":
