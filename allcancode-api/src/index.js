@@ -1,7 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
-import { pool } from "./db/pool.js";
+import { pool, sub2apiPool } from "./db/pool.js";
 import { getSub2apiApiUrl, Sub2apiRequestError, sub2apiRequest, toSub2apiPagination } from "./lib/sub2api.js";
 
 const app = express();
@@ -453,10 +453,59 @@ function buildBillingSummary(items) {
   return summary;
 }
 
+function maskRankingUser({ username, email, id }) {
+  const name = String(username ?? "").trim();
+  if (name) {
+    return name;
+  }
+
+  const mail = String(email ?? "").trim();
+  if (!mail.includes("@")) {
+    return mail || `User ${id}`;
+  }
+
+  const [prefix, domain] = mail.split("@");
+  const safePrefix = prefix.length <= 2 ? `${prefix[0] ?? "u"}***` : `${prefix.slice(0, 2)}***${prefix.slice(-1)}`;
+  return `${safePrefix}@${domain}`;
+}
+
+async function listUsageRanking(limit = 10) {
+  const safeLimit = Math.min(parsePositiveInt(limit, 10), 50);
+  const result = await sub2apiPool.query(
+    `
+      SELECT
+        u.user_id,
+        COALESCE(us.username, '') AS username,
+        COALESCE(us.email, '') AS email,
+        COUNT(*)::bigint AS requests,
+        COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0)::bigint AS tokens
+      FROM usage_logs u
+      LEFT JOIN users us ON u.user_id = us.id
+      WHERE u.created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY u.user_id, us.username, us.email
+      ORDER BY requests DESC, tokens DESC, u.user_id ASC
+      LIMIT $1
+    `,
+    [safeLimit]
+  );
+
+  return result.rows.map((row) => ({
+    id: Number(row.user_id),
+    name: maskRankingUser({
+      username: row.username,
+      email: row.email,
+      id: row.user_id
+    }),
+    requests: Number(row.requests ?? 0),
+    tokens: Number(row.tokens ?? 0)
+  }));
+}
+
 app.get(
   "/health",
   asyncRoute(async (_request, response) => {
     await pool.query("select 1");
+    await sub2apiPool.query("select 1");
     response.json({ status: "ok" });
   })
 );
@@ -749,6 +798,15 @@ app.get(
         endDate: filters.endDate
       }
     });
+  })
+);
+
+app.get(
+  "/api/app/ranking",
+  asyncRoute(requireUser),
+  asyncRoute(async (request, response) => {
+    const items = await listUsageRanking(request.query.limit);
+    response.json({ items });
   })
 );
 

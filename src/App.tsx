@@ -68,9 +68,8 @@ type RequestLog = {
 type RankingItem = {
   id: string;
   name: string;
-  spend: string;
   requests: string;
-  trend: string;
+  tokens: string;
 };
 
 type LotteryPrize = {
@@ -329,13 +328,12 @@ const copy = {
         ]
       },
       ranking: {
-        title: "消费排行榜",
-        subtitle: "本月用户消费、请求量与增长。",
+        title: "调用排行榜",
+        subtitle: "近 30 天用户请求量与 Token 调用排行。",
         rank: "排名",
         user: "用户",
-        spend: "消费",
         requests: "请求量",
-        trend: "趋势"
+        tokens: "Token 数"
       }
     }
   },
@@ -522,13 +520,12 @@ const copy = {
         ]
       },
       ranking: {
-        title: "Spend Ranking",
-        subtitle: "Monthly user spend, request volume, and growth.",
+        title: "Usage Ranking",
+        subtitle: "Top users by requests and tokens in the last 30 days.",
         rank: "Rank",
         user: "User",
-        spend: "Spend",
         requests: "Requests",
-        trend: "Trend"
+        tokens: "Tokens"
       }
     }
   }
@@ -571,64 +568,6 @@ function useTypewriter(lines: readonly TypewriterLine[]) {
     text: fullText.slice(0, charIndex)
   };
 }
-
-const initialKeys: ApiKeyItem[] = [
-  {
-    id: "key-live",
-    name: "Production Router",
-    secret: "ck_live_n97JqK4m8vW6Q",
-    scope: "Codex / Claude",
-    quota: "2.4M tokens",
-    usage: 72,
-    created: "2026-06-21",
-    status: "active"
-  },
-  {
-    id: "key-test",
-    name: "Staging Lab",
-    secret: "ck_test_V2pQ8xR5nT31",
-    scope: "Gemini / Codex",
-    quota: "800K tokens",
-    usage: 38,
-    created: "2026-06-18",
-    status: "active"
-  },
-  {
-    id: "key-mobile",
-    name: "Mobile Client",
-    secret: "ck_live_zH72pL9xC0aB",
-    scope: "All models",
-    quota: "1.1M tokens",
-    usage: 94,
-    created: "2026-06-02",
-    status: "paused"
-  }
-];
-
-const requestLogs: RequestLog[] = [
-  { id: "r1", time: "14:28:06", model: "codex-pro", endpoint: "/v1/chat/completions", keyName: "Production Router", status: "200", tokens: "18.4K", cost: "¥2.18", latency: "842ms" },
-  { id: "r2", time: "14:21:33", model: "claude-sonnet", endpoint: "/v1/messages", keyName: "Production Router", status: "200", tokens: "42.1K", cost: "¥5.76", latency: "1.2s" },
-  { id: "r3", time: "14:09:50", model: "gemini-flash", endpoint: "/v1/images/analyze", keyName: "Staging Lab", status: "200", tokens: "6.8K", cost: "¥0.61", latency: "688ms" },
-  { id: "r4", time: "13:55:17", model: "codex-mini", endpoint: "/v1/responses", keyName: "Mobile Client", status: "429", tokens: "0", cost: "¥0.00", latency: "124ms" },
-  { id: "r5", time: "13:44:02", model: "claude-haiku", endpoint: "/v1/messages", keyName: "Production Router", status: "200", tokens: "9.7K", cost: "¥0.92", latency: "731ms" }
-];
-
-const rankingItems: RankingItem[] = [
-  { id: "u1", name: "Aster Labs", spend: "¥8,942", requests: "1.42M", trend: "+18%" },
-  { id: "u2", name: "Northwind AI", spend: "¥7,680", requests: "1.08M", trend: "+12%" },
-  { id: "u3", name: "Blue Circuit", spend: "¥5,336", requests: "860K", trend: "+9%" },
-  { id: "u4", name: "Keystone Dev", spend: "¥4,128", requests: "602K", trend: "+6%" },
-  { id: "u5", name: "Orbit Studio", spend: "¥3,875", requests: "574K", trend: "+4%" }
-];
-
-const liveActivity = [
-  "Codex group A latency stabilized at 842ms.",
-  "Claude standby account passed cooldown check.",
-  "Gemini image lane switched to priority route.",
-  "Usage alert resolved for Mobile Client."
-];
-
-const spendBars = [42, 58, 46, 72, 67, 81, 76];
 
 function getInitialLocale(): Locale {
   try {
@@ -716,10 +655,19 @@ function toRequestLog(item: any): RequestLog {
   };
 }
 
+function toRankingItem(item: any): RankingItem {
+  return {
+    id: String(item.id),
+    name: String(item.name ?? "-"),
+    requests: formatTokenCount(Number(item.requests ?? 0)),
+    tokens: formatTokenCount(Number(item.tokens ?? 0))
+  };
+}
+
 function toSnapshot(payload: any): DashboardSnapshot {
   const summary = payload?.summary ?? {};
   const trend = Array.isArray(payload?.trend) ? payload.trend : [];
-  const maxSpend = Math.max(1, ...trend.map((item: any) => Number(item.spend ?? 0)));
+  const maxRequests = Math.max(1, ...trend.map((item: any) => Number(item.requests ?? 0)));
   return {
     balance: Number(summary.balance ?? 0),
     todayRequests: Number(summary.todayRequests ?? 0),
@@ -727,8 +675,8 @@ function toSnapshot(payload: any): DashboardSnapshot {
     activeKeys: Number(summary.activeKeys ?? 0),
     totalKeys: Number(summary.totalKeys ?? 0),
     remainingTokens: formatTokenCount(Number(summary.remainingTokens ?? summary.totalTokens ?? 0)),
-    activity: Array.isArray(payload?.recentActivity) && payload.recentActivity.length > 0 ? payload.recentActivity : liveActivity,
-    spendBars: trend.length > 0 ? trend.slice(-7).map((item: any) => Math.max(8, Math.round((Number(item.spend ?? 0) / maxSpend) * 100))) : spendBars
+    activity: Array.isArray(payload?.recentActivity) ? payload.recentActivity : [],
+    spendBars: trend.length > 0 ? trend.slice(-7).map((item: any) => Math.max(8, Math.round((Number(item.requests ?? 0) / maxRequests) * 100))) : []
   };
 }
 
@@ -945,18 +893,19 @@ function DashboardPage({
   onSectionChange: (section: DashboardSection) => void;
 }) {
   const d = copy.dashboard;
-  const [keys, setKeys] = useState<ApiKeyItem[]>(initialKeys);
-  const [requestItems, setRequestItems] = useState<RequestLog[]>(requestLogs);
+  const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const [requestItems, setRequestItems] = useState<RequestLog[]>([]);
+  const [rankingItems, setRankingItems] = useState<RankingItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodItem[]>([]);
   const [dashboard, setDashboard] = useState<DashboardSnapshot>({
-    balance: 286.42,
-    todayRequests: 24891,
-    successRate: 99.92,
-    activeKeys: 2,
-    totalKeys: 3,
-    remainingTokens: "1.82M",
-    activity: liveActivity,
-    spendBars
+    balance: 0,
+    todayRequests: 0,
+    successRate: 0,
+    activeKeys: 0,
+    totalKeys: 0,
+    remainingTokens: "0",
+    activity: [],
+    spendBars: []
   });
   const [selectedPackageId, setSelectedPackageId] = useState<string>(d.recharge.packages[1].id);
   const [paymentMethod, setPaymentMethod] = useState<string>(d.recharge.methods[0]);
@@ -996,13 +945,15 @@ function DashboardPage({
       apiRequest<any>("/dashboard", { token }),
       apiRequest<{ items: any[] }>("/keys", { token }),
       apiRequest<{ items: any[] }>("/usage?page=1&pageSize=20", { token }),
+      apiRequest<{ items: any[] }>("/ranking?limit=10", { token }),
       apiRequest<{ items: PaymentMethodItem[] }>("/payment/methods", { token }).catch(() => ({ items: [] }))
     ])
-      .then(([dashboardPayload, keyPayload, usagePayload, methodPayload]) => {
+      .then(([dashboardPayload, keyPayload, usagePayload, rankingPayload, methodPayload]) => {
         if (cancelled) return;
         setDashboard(toSnapshot(dashboardPayload));
         setKeys((keyPayload.items ?? []).map(toDashboardKey));
         setRequestItems((usagePayload.items ?? []).map(toRequestLog));
+        setRankingItems((rankingPayload.items ?? []).map(toRankingItem));
         setPaymentMethods(methodPayload.items ?? []);
       })
       .catch((error) => {
@@ -1015,54 +966,38 @@ function DashboardPage({
   }, [token]);
 
   const createKey = () => {
-    if (token) {
-      apiRequest<{ item: any }>("/keys", {
-        method: "POST",
-        token,
-        body: {
-          name: locale === "zh" ? "个人密钥" : "Personal Key",
-          scope: "All models",
-          quotaTokens: 500000
-        }
-      })
-        .then((payload) => setKeys((current) => [toDashboardKey(payload.item), ...current]))
-        .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to create key."));
-      onSectionChange("keys");
+    if (!token) {
+      setRechargeStatus(locale === "zh" ? "请先登录后再创建 Key。" : "Please sign in before creating a key.");
       return;
     }
 
-    const nextIndex = keys.length + 1;
-    setKeys((current) => [
-      {
-        id: `key-${Date.now()}`,
-        name: locale === "zh" ? `个人密钥 ${nextIndex}` : `Personal Key ${nextIndex}`,
-        secret: `ck_live_${Math.random().toString(36).slice(2, 14)}`,
-        scope: "All models",
-        quota: "500K tokens",
-        usage: 0,
-        created: "2026-06-24",
-        status: "active"
-      },
-      ...current
-    ]);
+    apiRequest<{ item: any }>("/keys", {
+      method: "POST",
+      token,
+      body: {
+        name: locale === "zh" ? "个人密钥" : "Personal Key"
+      }
+    })
+      .then((payload) => setKeys((current) => [toDashboardKey(payload.item), ...current]))
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to create key."));
     onSectionChange("keys");
   };
 
   const toggleKeyStatus = (id: string) => {
     const item = keys.find((key) => key.id === id);
-    if (token && item) {
-      const nextStatus = item.status === "active" ? "disabled" : "active";
-      apiRequest<{ item: any }>(`/keys/${id}`, { method: "PATCH", token, body: { status: nextStatus } })
-        .then((payload) => setKeys((current) => current.map((key) => (key.id === id ? toDashboardKey(payload.item) : key))))
-        .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to update key."));
+    if (!token || !item) {
+      setRechargeStatus(locale === "zh" ? "请先登录后再更新 Key。" : "Please sign in before updating a key.");
       return;
     }
 
-    setKeys((current) => current.map((item) => (item.id === id ? { ...item, status: item.status === "active" ? "paused" : "active" } : item)));
+    const nextStatus = item.status === "active" ? "disabled" : "active";
+    apiRequest<{ item: any }>(`/keys/${id}`, { method: "PATCH", token, body: { status: nextStatus } })
+      .then((payload) => setKeys((current) => current.map((key) => (key.id === id ? toDashboardKey(payload.item) : key))))
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to update key."));
   };
 
   const rotateKey = (id: string) => {
-    setKeys((current) => current.map((item) => (item.id === id ? { ...item, secret: `ck_live_${Math.random().toString(36).slice(2, 14)}` } : item)));
+    setRechargeStatus(locale === "zh" ? "sub2api 暂未开放前端重置 Key 接口，请在管理端处理。" : "Key rotation is not available from the user API yet.");
   };
 
   const copyKey = (key: ApiKeyItem) => {
@@ -1072,30 +1007,28 @@ function DashboardPage({
   };
 
   const submitRecharge = () => {
-    if (token) {
-      apiRequest<{ checkout?: { submitUrl?: string }; item?: unknown }>("/orders", {
-        method: "POST",
-        token,
-        body: {
-          packageName: selectedPackage.label,
-          amount: selectedPackage.amount,
-          bonusAmount: 0,
-          methodCode: paymentMethod
-        }
-      })
-        .then((payload) => {
-          setRechargeStatus(`${d.recharge.done} · ${paymentMethod}`);
-          if (payload.checkout?.submitUrl) {
-            window.open(payload.checkout.submitUrl, "_blank", "noopener,noreferrer");
-          }
-        })
-        .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to create order."));
+    if (!token) {
+      setRechargeStatus(locale === "zh" ? "请先登录后再发起充值。" : "Please sign in before recharging.");
       return;
     }
 
-    setDashboard((current) => ({ ...current, balance: current.balance + selectedPackage.amount }));
-    setRechargeStatus(`${d.recharge.done} · ${paymentMethod}`);
-    window.setTimeout(() => setRechargeStatus(""), 1800);
+    apiRequest<{ checkout?: { submitUrl?: string }; item?: unknown }>("/orders", {
+      method: "POST",
+      token,
+      body: {
+        packageName: selectedPackage.label,
+        amount: selectedPackage.amount,
+        bonusAmount: 0,
+        methodCode: paymentMethod
+      }
+    })
+      .then((payload) => {
+        setRechargeStatus(`${d.recharge.done} · ${paymentMethod}`);
+        if (payload.checkout?.submitUrl) {
+          window.open(payload.checkout.submitUrl, "_blank", "noopener,noreferrer");
+        }
+      })
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to create order."));
   };
 
   const drawPrize = () => {
@@ -1164,12 +1097,16 @@ function DashboardPage({
                     <h3>{d.overview.activity}</h3>
                   </div>
                   <div className="activity-feed">
-                    {dashboard.activity.map((item) => (
-                      <div className="activity-item" key={item}>
-                        <span />
-                        <p>{item}</p>
-                      </div>
-                    ))}
+                    {dashboard.activity.length > 0 ? (
+                      dashboard.activity.map((item) => (
+                        <div className="activity-item" key={item}>
+                          <span />
+                          <p>{item}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="empty-state">{locale === "zh" ? "暂无真实调用记录。" : "No real usage activity yet."}</p>
+                    )}
                   </div>
                 </article>
 
@@ -1179,9 +1116,13 @@ function DashboardPage({
                     <h3>{d.overview.spend}</h3>
                   </div>
                   <div className="spend-chart" aria-hidden="true">
-                    {dashboard.spendBars.map((height, index) => (
-                      <span key={index} style={{ height: `${height}%` }} />
-                    ))}
+                    {dashboard.spendBars.length > 0 ? (
+                      dashboard.spendBars.map((height, index) => (
+                        <span key={index} style={{ height: `${height}%` }} />
+                      ))
+                    ) : (
+                      <p className="empty-state">{locale === "zh" ? "暂无趋势数据。" : "No trend data yet."}</p>
+                    )}
                   </div>
                 </article>
               </section>
@@ -1198,7 +1139,7 @@ function DashboardPage({
               </SectionHeading>
 
               <div className="key-list">
-                {keys.map((item) => (
+                {keys.length > 0 ? keys.map((item) => (
                   <article className="key-row" key={item.id}>
                     <div className="key-main">
                       <span className={`key-status ${item.status}`} />
@@ -1234,7 +1175,7 @@ function DashboardPage({
                       </button>
                     </div>
                   </article>
-                ))}
+                )) : <p className="empty-state">{locale === "zh" ? "暂无 Key，点击上方按钮创建。" : "No keys yet. Create one above."}</p>}
               </div>
             </motion.div>
           )}
@@ -1253,7 +1194,7 @@ function DashboardPage({
                   <span>{d.requests.cost}</span>
                   <span>{d.requests.latency}</span>
                 </div>
-                {requestItems.map((item) => (
+                {requestItems.length > 0 ? requestItems.map((item) => (
                   <div className="table-row" key={item.id}>
                     <span>{item.time}</span>
                     <strong>{item.model}</strong>
@@ -1264,7 +1205,7 @@ function DashboardPage({
                     <span>{item.cost}</span>
                     <span>{item.latency}</span>
                   </div>
-                ))}
+                )) : <p className="empty-state">{locale === "zh" ? "暂无使用记录。" : "No usage records yet."}</p>}
               </div>
             </motion.div>
           )}
@@ -1407,19 +1348,17 @@ function DashboardPage({
                 <div className="table-row table-head">
                   <span>{d.ranking.rank}</span>
                   <span>{d.ranking.user}</span>
-                  <span>{d.ranking.spend}</span>
                   <span>{d.ranking.requests}</span>
-                  <span>{d.ranking.trend}</span>
+                  <span>{d.ranking.tokens}</span>
                 </div>
-                {rankingItems.map((item, index) => (
+                {rankingItems.length > 0 ? rankingItems.map((item, index) => (
                   <div className="table-row" key={item.id}>
                     <span className="rank-number">{index + 1}</span>
                     <strong>{item.name}</strong>
-                    <span>{item.spend}</span>
                     <span>{item.requests}</span>
-                    <span className="trend-up">{item.trend}</span>
+                    <span>{item.tokens}</span>
                   </div>
-                ))}
+                )) : <p className="empty-state">{locale === "zh" ? "暂无真实排行数据。" : "No real ranking data yet."}</p>}
               </div>
             </motion.div>
           )}

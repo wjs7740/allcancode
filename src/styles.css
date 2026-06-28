@@ -1195,6 +1195,22 @@ h1 {
   background: linear-gradient(180deg, rgba(216, 180, 106, 0.82), rgba(246, 247, 248, 0.22));
 }
 
+.empty-state {
+  width: 100%;
+  margin: 0;
+  padding: 1rem;
+  color: var(--faint);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+}
+
+.spend-chart .empty-state {
+  grid-column: 1 / -1;
+  align-self: center;
+  text-align: center;
+}
+
 .section-action,
 .key-actions button,
 .payment-methods button,
@@ -1344,8 +1360,8 @@ h1 {
 }
 
 .ranking-table .table-row {
-  min-width: 42rem;
-  grid-template-columns: 4rem minmax(12rem, 1fr) 8rem 8rem 6rem;
+  min-width: 34rem;
+  grid-template-columns: 4rem minmax(12rem, 1fr) 8rem 8rem;
 }
 
 .table-row:last-child {
