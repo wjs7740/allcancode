@@ -207,12 +207,15 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
     const loader = new GLTFLoader();
     let mixer: THREE.AnimationMixer | null = null;
     let activeModel: THREE.Object3D | null = null;
+    let headTarget: THREE.Object3D | null = null;
+    const eyeTargets: THREE.Object3D[] = [];
     let frame = 0;
     let last = performance.now();
     let animationId = 0;
     let isDisposed = false;
     const pointer = new THREE.Vector2();
     const targetPointer = new THREE.Vector2();
+    let clickPulse = 0;
 
     loader.load(
       config.path,
@@ -233,6 +236,15 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
 
         modelRoot.add(model);
         activeModel = model;
+        model.traverse((object) => {
+          const name = object.name.toLowerCase();
+          if (!headTarget && /(head|neck)/.test(name)) {
+            headTarget = object;
+          }
+          if (/(eye|pupil|face)/.test(name)) {
+            eyeTargets.push(object);
+          }
+        });
         mixer = new THREE.AnimationMixer(model);
 
         const clip = config.preferredAnimations.map((name) => THREE.AnimationClip.findByName(gltf.animations, name)).find(Boolean) ?? gltf.animations[0];
@@ -269,7 +281,15 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
       targetPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       targetPointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
     };
+    const handlePointerDown = () => {
+      clickPulse = 1;
+      host.dataset.robotInteraction = "pulse";
+      window.setTimeout(() => {
+        if (host.dataset.robotInteraction === "pulse") delete host.dataset.robotInteraction;
+      }, 360);
+    };
     window.addEventListener("pointermove", handlePointer, { passive: true });
+    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
 
     const samplePixels = () => {
       const gl = renderer.getContext();
@@ -329,6 +349,9 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
 
       const pulse = 0.5 + Math.sin(t * 3.1) * 0.5;
       coreLight.intensity = 1.9 + pulse * 1.4;
+      clickPulse = damp(clickPulse, 0, 5.8, delta);
+      coreLight.intensity += clickPulse * 5.4;
+      warm.intensity = 2.8 + clickPulse * 4.2;
       ringGroup.rotation.y = t * 0.16;
       ringGroup.rotation.z = Math.sin(t * 0.6) * 0.05;
       scanners.forEach((scanner, index) => {
@@ -336,7 +359,15 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
       });
 
       mixer?.update(delta);
-      if (activeModel) activeModel.rotation.z = Math.sin(t * 0.8) * config.idleSway;
+      if (activeModel) activeModel.rotation.z = Math.sin(t * 0.8) * config.idleSway + clickPulse * 0.02;
+      if (headTarget) {
+        headTarget.rotation.y = damp(headTarget.rotation.y, pointer.x * 0.34, 6.6, delta);
+        headTarget.rotation.x = damp(headTarget.rotation.x, pointer.y * 0.18, 6.6, delta);
+      }
+      eyeTargets.forEach((eye) => {
+        eye.rotation.y = damp(eye.rotation.y, pointer.x * 0.22, 7.2, delta);
+        eye.rotation.x = damp(eye.rotation.x, pointer.y * 0.12, 7.2, delta);
+      });
 
       renderer.render(scene, camera);
       host.dataset.robotFrame = String(frame);
@@ -359,6 +390,7 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
       cancelAnimationFrame(animationId);
       resizeObserver.disconnect();
       window.removeEventListener("pointermove", handlePointer);
+      window.removeEventListener("pointerdown", handlePointerDown);
       if (window.__codiumRobotProbe === probe) window.__codiumRobotProbe = undefined;
       delete host.dataset.robotStatus;
       delete host.dataset.robotFrame;

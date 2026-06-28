@@ -1,10 +1,10 @@
 :root {
   color-scheme: dark;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+    "HarmonyOS Sans SC", "Alibaba PuHuiTi", "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei",
     sans-serif;
-  background: #050607;
-  color: #f6f7f8;
+  background: #061211;
+  color: #f7f5e7;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --panel: rgba(13, 16, 20, 0.72);
@@ -12,15 +12,18 @@
   --line: rgba(255, 255, 255, 0.12);
   --muted: rgba(246, 247, 248, 0.66);
   --faint: rgba(246, 247, 248, 0.42);
-  --accent: #f6f7f8;
-  --accent-strong: #d8dde2;
-  --success: #75d89d;
-  --warning: #e8cf7a;
+  --accent: #f2d678;
+  --accent-strong: #ffbf1f;
+  --success: #75d98b;
+  --warning: #f2d678;
   --danger: #ee7890;
-  --warm: #d8b46a;
-  --hot: #ff2f68;
-  --hot-strong: #ff1f5f;
+  --warm: #e5c36f;
+  --hot: #1e8aa8;
+  --hot-strong: #48a85b;
   --rose: #fb7185;
+  --brand-blue: #145a78;
+  --brand-green: #3f8a44;
+  --brand-gold: #f2c94c;
 }
 
 * {
@@ -67,7 +70,10 @@ a {
   position: relative;
   min-height: 100vh;
   overflow-x: clip;
-  background: #101113;
+  background:
+    radial-gradient(circle at 78% 30%, rgba(46, 143, 176, 0.22), transparent 32rem),
+    radial-gradient(circle at 18% 74%, rgba(63, 138, 68, 0.16), transparent 28rem),
+    linear-gradient(135deg, #071817 0%, #081013 46%, #020506 100%);
 }
 
 .app-shell::before {
@@ -77,8 +83,8 @@ a {
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(90deg, rgba(16, 17, 19, 0.98) 0%, rgba(16, 17, 19, 0.6) 31%, rgba(16, 17, 19, 0) 56%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 28%);
+    linear-gradient(90deg, rgba(3, 8, 9, 0.96) 0%, rgba(3, 8, 9, 0.62) 34%, rgba(3, 8, 9, 0.1) 62%),
+    linear-gradient(180deg, rgba(242, 214, 120, 0.05), transparent 28%);
 }
 
 .robot-stage {
@@ -99,6 +105,10 @@ a {
 .robot-stage-auth {
   opacity: 0.78;
   transform: translateX(7vw) scale(1.03);
+}
+
+.robot-stage[data-robot-interaction="pulse"] canvas {
+  filter: drop-shadow(0 0 2.5rem rgba(242, 214, 120, 0.36));
 }
 
 .scene-loader {
@@ -155,13 +165,17 @@ a {
 
 .logo-core {
   display: grid;
-  width: 3.35rem;
-  height: 3.35rem;
+  width: 3.65rem;
+  height: 3.65rem;
   place-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 1rem;
-  box-shadow: 0 1rem 2.6rem rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(230, 246, 238, 0.88)),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(122, 209, 123, 0.28);
+  border-radius: 1.15rem;
+  box-shadow:
+    0 1rem 2.8rem rgba(0, 0, 0, 0.28),
+    0 0 2rem rgba(30, 138, 168, 0.12);
   overflow: hidden;
 }
 
@@ -177,14 +191,17 @@ a {
 }
 
 .brand-mark strong {
-  font-size: 1rem;
-  letter-spacing: 0.02em;
+  color: #f8f4dc;
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .brand-mark small {
   margin-top: 0.12rem;
-  color: var(--faint);
+  color: rgba(242, 214, 120, 0.72);
   font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -267,9 +284,9 @@ a {
 .session-pill {
   min-width: 5.7rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--hot), var(--hot-strong));
-  border-color: rgba(255, 47, 104, 0.36);
-  box-shadow: 0 1rem 2.4rem rgba(255, 47, 104, 0.2);
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+  border-color: rgba(122, 209, 123, 0.32);
+  box-shadow: 0 1rem 2.4rem rgba(30, 138, 168, 0.18);
 }
 
 .top-dashboard-nav {
@@ -350,7 +367,7 @@ a {
 }
 
 .top-dashboard-nav button.is-active::after {
-  background: var(--hot);
+  background: var(--brand-gold);
 }
 
 .hero-grid {
@@ -370,7 +387,24 @@ a {
 }
 
 .hero-copy {
-  max-width: 34.5rem;
+  max-width: 31rem;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.3rem;
+  padding: 0 0.85rem;
+  color: rgba(242, 214, 120, 0.94);
+  background: rgba(242, 214, 120, 0.08);
+  border: 1px solid rgba(242, 214, 120, 0.2);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 0.8rem 2.4rem rgba(242, 214, 120, 0.08);
 }
 
 .auth-kicker {
@@ -391,34 +425,65 @@ p {
 }
 
 h1 {
-  margin-top: 1.55rem;
-  font-size: clamp(4.8rem, 7.6vw, 7rem);
-  line-height: 0.88;
-  letter-spacing: 0;
-  text-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.34);
+  margin-top: 1.15rem;
+  color: #f8f2d0;
+  font-size: clamp(3.75rem, 6.7vw, 6.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+  text-shadow:
+    0 1.5rem 5rem rgba(0, 0, 0, 0.42),
+    0 0 2.6rem rgba(242, 214, 120, 0.12);
 }
 
 .tagline {
-  margin-top: 1.9rem;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(1.04rem, 1.5vw, 1.28rem);
-  font-weight: 650;
+  margin-top: 1.35rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(1rem, 1.38vw, 1.18rem);
+  font-weight: 760;
+}
+
+.typewriter-line {
+  display: inline-flex;
+  min-height: clamp(2.7rem, 4vw, 3.55rem);
+  align-items: center;
+  margin-top: 0.78rem;
+  color: var(--brand-gold);
+  font-size: clamp(2.15rem, 4.2vw, 3.85rem);
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-shadow: 0 0 2.2rem rgba(242, 201, 76, 0.18);
+}
+
+.typewriter-line span {
+  white-space: nowrap;
+}
+
+.typewriter-line i {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.88em;
+  margin-left: 0.12em;
+  background: currentColor;
+  border-radius: 999px;
+  animation: caretBlink 0.82s steps(1) infinite;
 }
 
 .hero-description {
-  max-width: 34rem;
-  margin-top: 1rem;
-  color: var(--muted);
-  font-size: clamp(0.98rem, 1.18vw, 1.08rem);
-  line-height: 1.78;
+  max-width: 28rem;
+  margin-top: 1.15rem;
+  color: rgba(246, 247, 248, 0.72);
+  font-size: clamp(0.96rem, 1.12vw, 1.04rem);
+  line-height: 1.72;
 }
 
 .hero-emphasis {
-  max-width: 34rem;
-  margin-top: 0.85rem;
-  color: rgba(246, 247, 248, 0.78);
-  font-size: clamp(0.98rem, 1.18vw, 1.08rem);
-  line-height: 1.7;
+  max-width: 29rem;
+  margin-top: 0.8rem;
+  color: rgba(117, 217, 139, 0.88);
+  font-size: clamp(0.95rem, 1.1vw, 1.02rem);
+  font-weight: 750;
+  line-height: 1.65;
 }
 
 .hero-actions {
@@ -457,14 +522,16 @@ h1 {
 
 .primary-button {
   color: #fff;
-  background: linear-gradient(135deg, var(--hot), var(--hot-strong));
-  box-shadow: 0 1.2rem 3rem rgba(255, 47, 104, 0.22);
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+  box-shadow:
+    0 1.2rem 3rem rgba(30, 138, 168, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .ghost-button {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(248, 242, 208, 0.96);
+  background: rgba(242, 214, 120, 0.08);
+  border: 1px solid rgba(242, 214, 120, 0.22);
 }
 
 .primary-button:hover,
@@ -622,9 +689,9 @@ h1 {
 .submit-button {
   min-height: 3.3rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--hot), var(--hot-strong));
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
   font-weight: 800;
-  box-shadow: 0 1rem 2.4rem rgba(255, 47, 104, 0.22);
+  box-shadow: 0 1rem 2.4rem rgba(30, 138, 168, 0.2);
 }
 
 .submit-button:disabled,
@@ -1663,6 +1730,18 @@ h1 {
   }
 }
 
+@keyframes caretBlink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+
+  49%,
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 980px) {
   .app-shell::before {
     background:
@@ -1708,11 +1787,15 @@ h1 {
   }
 
   .hero-copy {
-    max-width: 34rem;
+    max-width: 31rem;
   }
 
   h1 {
-    font-size: clamp(4rem, 16vw, 5.4rem);
+    font-size: clamp(3.15rem, 13vw, 4.9rem);
+  }
+
+  .typewriter-line {
+    font-size: clamp(1.8rem, 8vw, 3rem);
   }
 
   .hero-description {

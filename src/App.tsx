@@ -80,6 +80,11 @@ type LotteryPrize = {
   code: string;
 };
 
+type TypewriterLine = {
+  lead: string;
+  accent: string;
+};
+
 type SessionUser = {
   id: number;
   username: string;
@@ -138,10 +143,10 @@ type AuthFieldId = keyof typeof authFieldConfig;
 const copy = {
   zh: {
     htmlLang: "zh-CN",
-    documentTitle: "Codium - AI API Gateway",
-    metaDescription: "Codium 是一套现代 AI API Gateway 前端体验，包含自然动态机器人、登录注册入口和中英文切换。",
+    documentTitle: "AllCanCode - AI 中转站",
+    metaDescription: "AllCanCode 是面向 AI 开发者的模型中转站，统一接入、低成本调用、稳定转发。",
     navLabel: "站点导航",
-    homeLabel: "Codium 首页",
+    homeLabel: "AllCanCode 首页",
     languageCode: "ZH",
     switchLanguageLabel: "Switch to English",
     mascotLabel: "3D 角色切换",
@@ -149,11 +154,16 @@ const copy = {
       robot: "机器人",
       fox: "小狐狸"
     },
-    heroLabel: "Codium",
-    tagline: "面向全球开发者，稳定转发一步到位。",
-    description:
-      "本站使用 AI 智能识别分组账号健康情况，账号异常触发熔断隔离，自动分配切换请求。冷却期间轮询当前账号健康状态，可实现自动恢复正常调用。",
-    emphasis: "高性能转发、精确配额、稳定熔断、安全可靠。",
+    heroLabel: "AllCanCode",
+    tagline: "一个入口，连通主流 AI 模型。",
+    typewriter: [
+      { lead: "AI 接入", accent: "更快上线" },
+      { lead: "模型调用", accent: "更低成本" },
+      { lead: "中转路由", accent: "更稳更省" },
+      { lead: "开发提效", accent: "从这里开始" }
+    ],
+    description: "统一管理 Key、余额、用量与支付，把复杂模型接入变成一次配置。",
+    emphasis: "GPT / Claude / Gemini 多模型中转，低价、稳定、方便接入。",
     actionsLabel: "账户操作",
     loginCta: "立即登录",
     registerCta: "注册账户",
@@ -161,9 +171,9 @@ const copy = {
     footerLabel: "查看模型列表",
     models: {
       label: "模型列表",
-      title: "模型列表",
-      description: "Codium 统一接入 GPT、Claude、Gemini 等模型版本。不同供应商共享同一套密钥、余额、熔断和调用记录。",
-      cta: "开始接入",
+      title: "接入一次，多模型可用",
+      description: "AllCanCode 统一接入 GPT、Claude、Gemini 等模型。一个账户管理密钥、余额、支付和调用记录。",
+      cta: "立即接入",
       groups: [
         {
           id: "gpt",
@@ -190,8 +200,8 @@ const copy = {
       kicker: "ACCOUNT ACCESS",
       loginTitle: "登录",
       registerTitle: "注册",
-      loginSubtitle: "进入您的 Codium 账户",
-      registerSubtitle: "创建 Codium 账户",
+      loginSubtitle: "进入您的 AllCanCode 账户",
+      registerSubtitle: "创建 AllCanCode 账户",
       submitLogin: "登录",
       submitRegister: "注册",
       oauthLabel: "第三方登录",
@@ -326,10 +336,10 @@ const copy = {
   },
   en: {
     htmlLang: "en",
-    documentTitle: "Codium - AI API Gateway",
-    metaDescription: "Codium is a modern AI API Gateway experience with a fluid robot hero, account access, and bilingual support.",
+    documentTitle: "AllCanCode - AI Gateway Hub",
+    metaDescription: "AllCanCode is an AI gateway hub for developers: easy access, lower cost, stable routing.",
     navLabel: "Site navigation",
-    homeLabel: "Codium home",
+    homeLabel: "AllCanCode home",
     languageCode: "EN",
     switchLanguageLabel: "切换到中文",
     mascotLabel: "3D character switcher",
@@ -337,11 +347,16 @@ const copy = {
       robot: "Robot",
       fox: "Fox"
     },
-    heroLabel: "Codium",
-    tagline: "Stable routing for global developers, in one step.",
-    description:
-      "Codium uses AI to monitor grouped account health. When an account becomes abnormal, failover isolation is triggered and requests are automatically reassigned. During cooldown, health checks continue until normal routing is restored.",
-    emphasis: "High-performance forwarding, precise quotas, stable failover, and secure operations.",
+    heroLabel: "AllCanCode",
+    tagline: "One gateway for every AI build.",
+    typewriter: [
+      { lead: "AI access", accent: "launch faster" },
+      { lead: "Model calls", accent: "cost less" },
+      { lead: "Smart routing", accent: "stay stable" },
+      { lead: "AI coding", accent: "ship more" }
+    ],
+    description: "Manage keys, balance, usage, and payment in one place. Turn model integration into one clean setup.",
+    emphasis: "GPT / Claude / Gemini gateway routing with low-cost, reliable access.",
     actionsLabel: "Account actions",
     loginCta: "Sign in",
     registerCta: "Create account",
@@ -349,9 +364,9 @@ const copy = {
     footerLabel: "View model list",
     models: {
       label: "Model list",
-      title: "Model list",
-      description: "Codium routes GPT, Claude, Gemini, and other model versions through one gateway. Providers share one key system, balance, failover, and request history.",
-      cta: "Start routing",
+      title: "Connect once. Use more models.",
+      description: "AllCanCode routes GPT, Claude, Gemini, and more through one account with shared keys, balance, payment, and usage records.",
+      cta: "Start building",
       groups: [
         {
           id: "gpt",
@@ -378,8 +393,8 @@ const copy = {
       kicker: "ACCOUNT ACCESS",
       loginTitle: "Sign in",
       registerTitle: "Create account",
-      loginSubtitle: "Access your Codium account",
-      registerSubtitle: "Create your Codium account",
+      loginSubtitle: "Access your AllCanCode account",
+      registerSubtitle: "Create your AllCanCode account",
       submitLogin: "Sign in",
       submitRegister: "Create account",
       oauthLabel: "Third-party sign-in",
@@ -515,6 +530,42 @@ const copy = {
 } as const;
 
 type PageCopy = (typeof copy)[Locale];
+
+function useTypewriter(lines: readonly TypewriterLine[]) {
+  const [lineIndex, setLineIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const currentLine = lines[lineIndex] ?? lines[0];
+  const fullText = `${currentLine.lead} · ${currentLine.accent}`;
+
+  useEffect(() => {
+    const delay = deleting ? 34 : charIndex === fullText.length ? 1300 : 72;
+    const timer = window.setTimeout(() => {
+      if (!deleting && charIndex < fullText.length) {
+        setCharIndex((current) => current + 1);
+        return;
+      }
+      if (!deleting && charIndex >= fullText.length) {
+        setDeleting(true);
+        return;
+      }
+      if (deleting && charIndex > 0) {
+        setCharIndex((current) => current - 1);
+        return;
+      }
+      setDeleting(false);
+      setLineIndex((current) => (current + 1) % lines.length);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [charIndex, deleting, fullText.length, lines.length]);
+
+  return {
+    lead: currentLine.lead,
+    accent: currentLine.accent,
+    text: fullText.slice(0, charIndex)
+  };
+}
 
 const initialKeys: ApiKeyItem[] = [
   {
@@ -687,6 +738,7 @@ function App() {
   const [activeDashboardSection, setActiveDashboardSection] = useState<DashboardSection>("overview");
   const heroState = authMode || isAuthenticated ? "auth" : "intro";
   const t = copy[locale];
+  const typedLine = useTypewriter(t.typewriter);
   const dashboardNavItems = (Object.keys(t.dashboard.nav) as DashboardSection[]).map((id) => ({
     id,
     label: t.dashboard.nav[id],
@@ -763,8 +815,8 @@ function App() {
             <CodiumLogo className="codium-logo" />
           </span>
           <span>
-            <strong>Codium</strong>
-            <small>AI Gateway</small>
+            <strong>AllCanCode</strong>
+            <small>AI Hub</small>
           </span>
         </a>
 
@@ -827,8 +879,13 @@ function App() {
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <h1>Codium</h1>
+                  <span className="hero-badge">AI Gateway Hub</span>
+                  <h1>AllCanCode</h1>
                   <p className="tagline">{t.tagline}</p>
+                  <p className="typewriter-line" aria-label={`${typedLine.lead} ${typedLine.accent}`}>
+                    <span>{typedLine.text}</span>
+                    <i />
+                  </p>
                   <p className="hero-description">{t.description}</p>
                   <p className="hero-emphasis">{t.emphasis}</p>
 
