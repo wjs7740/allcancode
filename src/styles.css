@@ -3,27 +3,27 @@
   font-family:
     "HarmonyOS Sans SC", "Alibaba PuHuiTi", "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei",
     sans-serif;
-  background: #061211;
-  color: #f7f5e7;
+  background: #070704;
+  color: #f6efd6;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --panel: rgba(13, 16, 20, 0.72);
-  --panel-strong: rgba(16, 19, 24, 0.88);
+  --panel: rgba(12, 11, 8, 0.72);
+  --panel-strong: rgba(15, 13, 9, 0.9);
   --line: rgba(255, 255, 255, 0.12);
-  --muted: rgba(246, 247, 248, 0.66);
-  --faint: rgba(246, 247, 248, 0.42);
-  --accent: #f2d678;
-  --accent-strong: #ffbf1f;
-  --success: #75d98b;
-  --warning: #f2d678;
+  --muted: rgba(246, 239, 214, 0.62);
+  --faint: rgba(246, 239, 214, 0.38);
+  --accent: #d8b866;
+  --accent-strong: #f4dda0;
+  --success: #b7cf9d;
+  --warning: #d8b866;
   --danger: #ee7890;
-  --warm: #e5c36f;
-  --hot: #1e8aa8;
-  --hot-strong: #48a85b;
-  --rose: #fb7185;
-  --brand-blue: #145a78;
-  --brand-green: #3f8a44;
-  --brand-gold: #f2c94c;
+  --warm: #c7a45c;
+  --hot: #0f2324;
+  --hot-strong: #22342c;
+  --rose: #b17966;
+  --brand-blue: #142525;
+  --brand-green: #263826;
+  --brand-gold: #d8b866;
 }
 
 * {
@@ -71,9 +71,9 @@ a {
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 78% 30%, rgba(46, 143, 176, 0.22), transparent 32rem),
-    radial-gradient(circle at 18% 74%, rgba(63, 138, 68, 0.16), transparent 28rem),
-    linear-gradient(135deg, #071817 0%, #081013 46%, #020506 100%);
+    radial-gradient(circle at 78% 30%, rgba(216, 184, 102, 0.12), transparent 30rem),
+    radial-gradient(circle at 18% 78%, rgba(82, 91, 67, 0.1), transparent 28rem),
+    linear-gradient(135deg, #10100a 0%, #080806 48%, #020201 100%);
 }
 
 .app-shell::before {
@@ -83,8 +83,8 @@ a {
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(90deg, rgba(3, 8, 9, 0.96) 0%, rgba(3, 8, 9, 0.62) 34%, rgba(3, 8, 9, 0.1) 62%),
-    linear-gradient(180deg, rgba(242, 214, 120, 0.05), transparent 28%);
+    linear-gradient(90deg, rgba(3, 3, 2, 0.96) 0%, rgba(5, 5, 3, 0.66) 35%, rgba(5, 5, 3, 0.08) 65%),
+    linear-gradient(180deg, rgba(216, 184, 102, 0.045), transparent 28%);
 }
 
 .robot-stage {
@@ -108,7 +108,7 @@ a {
 }
 
 .robot-stage[data-robot-interaction="pulse"] canvas {
-  filter: drop-shadow(0 0 2.5rem rgba(242, 214, 120, 0.36));
+  filter: drop-shadow(0 0 2.5rem rgba(216, 184, 102, 0.28));
 }
 
 .scene-loader {
@@ -165,17 +165,15 @@ a {
 
 .logo-core {
   display: grid;
-  width: 3.65rem;
-  height: 3.65rem;
+  width: 3.35rem;
+  height: 3.35rem;
   place-items: center;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(230, 246, 238, 0.88)),
-    rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(122, 209, 123, 0.28);
-  border-radius: 1.15rem;
+  background: rgba(12, 11, 8, 0.56);
+  border: 1px solid rgba(216, 184, 102, 0.22);
+  border-radius: 1rem;
   box-shadow:
-    0 1rem 2.8rem rgba(0, 0, 0, 0.28),
-    0 0 2rem rgba(30, 138, 168, 0.12);
+    0 1rem 2.4rem rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 
@@ -185,24 +183,19 @@ a {
   height: 100%;
 }
 
-.brand-mark strong,
-.brand-mark small {
+.brand-mark strong {
   display: block;
 }
 
 .brand-mark strong {
-  color: #f8f4dc;
-  font-size: 1.08rem;
+  color: #f6efd6;
+  font-size: 1.15rem;
   font-weight: 900;
   letter-spacing: -0.02em;
 }
 
 .brand-mark small {
-  margin-top: 0.12rem;
-  color: rgba(242, 214, 120, 0.72);
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
+  display: none;
 }
 
 .top-actions {
@@ -216,8 +209,8 @@ a {
   align-items: center;
   gap: 0.18rem;
   padding: 0.22rem;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(216, 184, 102, 0.14);
   border-radius: 0.85rem;
   backdrop-filter: blur(20px);
 }
@@ -255,8 +248,8 @@ a {
 }
 
 .mascot-switch button.is-active {
-  color: #061014;
-  background: rgba(246, 247, 248, 0.96);
+  color: #090804;
+  background: rgba(244, 221, 160, 0.96);
 }
 
 .icon-pill {
@@ -267,8 +260,8 @@ a {
   gap: 0.45rem;
   padding: 0 1rem;
   color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(216, 184, 102, 0.14);
   border-radius: 999px;
   backdrop-filter: blur(20px);
 }
@@ -284,9 +277,9 @@ a {
 .session-pill {
   min-width: 5.7rem;
   color: #fff;
-  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
-  border-color: rgba(122, 209, 123, 0.32);
-  box-shadow: 0 1rem 2.4rem rgba(30, 138, 168, 0.18);
+  background: linear-gradient(135deg, rgba(216, 184, 102, 0.2), rgba(255, 255, 255, 0.08));
+  border-color: rgba(216, 184, 102, 0.26);
+  box-shadow: 0 1rem 2.4rem rgba(0, 0, 0, 0.22);
 }
 
 .top-dashboard-nav {
@@ -390,23 +383,6 @@ a {
   max-width: 31rem;
 }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.3rem;
-  padding: 0 0.85rem;
-  color: rgba(242, 214, 120, 0.94);
-  background: rgba(242, 214, 120, 0.08);
-  border: 1px solid rgba(242, 214, 120, 0.2);
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  box-shadow: 0 0.8rem 2.4rem rgba(242, 214, 120, 0.08);
-}
-
 .auth-kicker {
   display: inline-flex;
   align-items: center;
@@ -425,34 +401,34 @@ p {
 }
 
 h1 {
-  margin-top: 1.15rem;
-  color: #f8f2d0;
-  font-size: clamp(3.75rem, 6.7vw, 6.25rem);
+  margin-top: 0;
+  color: #f6efd6;
+  font-size: clamp(4rem, 7vw, 6.6rem);
   line-height: 0.9;
   letter-spacing: -0.07em;
   text-shadow:
     0 1.5rem 5rem rgba(0, 0, 0, 0.42),
-    0 0 2.6rem rgba(242, 214, 120, 0.12);
+    0 0 2.8rem rgba(216, 184, 102, 0.1);
 }
 
 .tagline {
-  margin-top: 1.35rem;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: clamp(1rem, 1.38vw, 1.18rem);
-  font-weight: 760;
+  margin-top: 1.15rem;
+  color: rgba(246, 239, 214, 0.8);
+  font-size: clamp(1.05rem, 1.45vw, 1.24rem);
+  font-weight: 720;
 }
 
 .typewriter-line {
   display: inline-flex;
   min-height: clamp(2.7rem, 4vw, 3.55rem);
   align-items: center;
-  margin-top: 0.78rem;
-  color: var(--brand-gold);
-  font-size: clamp(2.15rem, 4.2vw, 3.85rem);
+  margin-top: 0.9rem;
+  color: var(--accent-strong);
+  font-size: clamp(2.05rem, 4vw, 3.65rem);
   font-weight: 950;
   letter-spacing: -0.05em;
   line-height: 1;
-  text-shadow: 0 0 2.2rem rgba(242, 201, 76, 0.18);
+  text-shadow: 0 0 2.2rem rgba(216, 184, 102, 0.14);
 }
 
 .typewriter-line span {
@@ -469,28 +445,11 @@ h1 {
   animation: caretBlink 0.82s steps(1) infinite;
 }
 
-.hero-description {
-  max-width: 28rem;
-  margin-top: 1.15rem;
-  color: rgba(246, 247, 248, 0.72);
-  font-size: clamp(0.96rem, 1.12vw, 1.04rem);
-  line-height: 1.72;
-}
-
-.hero-emphasis {
-  max-width: 29rem;
-  margin-top: 0.8rem;
-  color: rgba(117, 217, 139, 0.88);
-  font-size: clamp(0.95rem, 1.1vw, 1.02rem);
-  font-weight: 750;
-  line-height: 1.65;
-}
-
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 2.25rem;
+  margin-top: 2.35rem;
 }
 
 .primary-button,
@@ -521,17 +480,18 @@ h1 {
 }
 
 .primary-button {
-  color: #fff;
-  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+  color: #100e08;
+  background: linear-gradient(135deg, #f6e8b5, #c9a24f);
   box-shadow:
-    0 1.2rem 3rem rgba(30, 138, 168, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 1.2rem 3rem rgba(0, 0, 0, 0.28),
+    0 0 2rem rgba(216, 184, 102, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .ghost-button {
-  color: rgba(248, 242, 208, 0.96);
-  background: rgba(242, 214, 120, 0.08);
-  border: 1px solid rgba(242, 214, 120, 0.22);
+  color: rgba(246, 239, 214, 0.92);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(216, 184, 102, 0.22);
 }
 
 .primary-button:hover,
@@ -688,10 +648,12 @@ h1 {
 
 .submit-button {
   min-height: 3.3rem;
-  color: #fff;
-  background: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+  color: #100e08;
+  background: linear-gradient(135deg, #f6e8b5, #c9a24f);
   font-weight: 800;
-  box-shadow: 0 1rem 2.4rem rgba(30, 138, 168, 0.2);
+  box-shadow:
+    0 1rem 2.4rem rgba(0, 0, 0, 0.22),
+    0 0 1.8rem rgba(216, 184, 102, 0.1);
 }
 
 .submit-button:disabled,
@@ -1796,10 +1758,6 @@ h1 {
 
   .typewriter-line {
     font-size: clamp(1.8rem, 8vw, 3rem);
-  }
-
-  .hero-description {
-    max-width: 35rem;
   }
 
   .auth-panel {

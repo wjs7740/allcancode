@@ -38,11 +38,17 @@ Default local admin account for `sub2api`:
 - Email: `admin@allcancode.local`
 - Password: `admin123456`
 
+Default local user account for `allcancode`:
+
+- Email: `demo@allcancode.local`
+- Password: `demo123456`
+
 Fresh deploy bootstrap now does the following automatically:
 
 - accepts the required admin compliance acknowledgement
 - enables ordinary-user registration
 - enables payment
+- creates or refreshes the default local `allcancode` demo user
 - creates or updates a local EasyPay-compatible provider for Docker demo use
 - enables visible `alipay` and `wxpay` payment methods
 

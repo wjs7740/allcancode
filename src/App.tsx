@@ -804,6 +804,11 @@ function App() {
     setAuthMode(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const openAuth = (mode: Exclude<AuthMode, null>) => {
+    setAuthError("");
+    setAuthMode(mode);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <main className={`app-shell ${isAuthenticated ? "is-dashboard" : ""}`}>
@@ -816,7 +821,6 @@ function App() {
           </span>
           <span>
             <strong>AllCanCode</strong>
-            <small>AI Hub</small>
           </span>
         </a>
 
@@ -879,22 +883,19 @@ function App() {
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <span className="hero-badge">AI Gateway Hub</span>
                   <h1>AllCanCode</h1>
                   <p className="tagline">{t.tagline}</p>
                   <p className="typewriter-line" aria-label={`${typedLine.lead} ${typedLine.accent}`}>
                     <span>{typedLine.text}</span>
                     <i />
                   </p>
-                  <p className="hero-description">{t.description}</p>
-                  <p className="hero-emphasis">{t.emphasis}</p>
 
                   <div className="hero-actions" aria-label={t.actionsLabel}>
-                    <button className="primary-button" type="button" onClick={() => setAuthMode("login")}>
+                    <button className="primary-button" type="button" onClick={() => openAuth("login")}>
                       <LockKeyhole size={18} />
-                      {t.loginCta}
+                      {t.models.cta}
                     </button>
-                    <button className="ghost-button" type="button" onClick={() => setAuthMode("register")}>
+                    <button className="ghost-button" type="button" onClick={() => openAuth("register")}>
                       {t.registerCta}
                       <ArrowRight size={17} />
                     </button>
@@ -909,7 +910,7 @@ function App() {
             <ChevronDown size={16} />
           </a>
 
-          <ModelSection copy={t} onStart={() => setAuthMode("register")} />
+          <ModelSection copy={t} onStart={() => openAuth("login")} />
         </>
       )}
     </main>

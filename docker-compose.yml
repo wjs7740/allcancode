@@ -108,6 +108,9 @@ services:
       SUB2API_URL: http://sub2api:8080
       SUB2API_ADMIN_EMAIL: ${SUB2API_ADMIN_EMAIL:-admin@allcancode.local}
       SUB2API_ADMIN_PASSWORD: ${SUB2API_ADMIN_PASSWORD:-admin123456}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@allcancode.local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-demo123456}
+      DEMO_USER_USERNAME: ${DEMO_USER_USERNAME:-demo}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       PGHOST: postgres
       PGPORT: 5432

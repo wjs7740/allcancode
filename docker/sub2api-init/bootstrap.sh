@@ -4,6 +4,9 @@ set -eu
 SUB2API_URL="${SUB2API_URL:-http://sub2api:8080}"
 ADMIN_EMAIL="${SUB2API_ADMIN_EMAIL:-admin@allcancode.local}"
 ADMIN_PASSWORD="${SUB2API_ADMIN_PASSWORD:-admin123456}"
+DEMO_EMAIL="${DEMO_USER_EMAIL:-demo@allcancode.local}"
+DEMO_PASSWORD="${DEMO_USER_PASSWORD:-demo123456}"
+DEMO_USERNAME="${DEMO_USER_USERNAME:-demo}"
 PGHOST="${PGHOST:-postgres}"
 PGPORT="${PGPORT:-5432}"
 PGDATABASE="${PGDATABASE:-sub2api}"
@@ -110,5 +113,31 @@ upsert_setting "payment_visible_method_alipay_enabled" "true"
 upsert_setting "payment_visible_method_alipay_source" "easypay_alipay"
 upsert_setting "payment_visible_method_wxpay_enabled" "true"
 upsert_setting "payment_visible_method_wxpay_source" "easypay_wxpay"
+
+DEMO_LOGIN_PAYLOAD=$(jq -nc --arg email "$DEMO_EMAIL" --arg password "$DEMO_PASSWORD" '{email:$email,password:$password}')
+if curl -fsS -X POST "${SUB2API_URL}/api/v1/auth/login" -H "Content-Type: application/json" -d "$DEMO_LOGIN_PAYLOAD" >/dev/null 2>&1; then
+  echo "Demo user already available: ${DEMO_EMAIL}"
+else
+  EXISTING_USER_ID=$(curl -fsS "${SUB2API_URL}/api/v1/admin/users?search=${DEMO_EMAIL}&page=1&page_size=10" \
+    -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+    | jq -r --arg email "$DEMO_EMAIL" '.data.items[]? | select(.email == $email) | .id' \
+    | head -n 1)
+
+  if [ -n "$EXISTING_USER_ID" ] && [ "$EXISTING_USER_ID" != "null" ]; then
+    DEMO_UPDATE_PAYLOAD=$(jq -nc --arg password "$DEMO_PASSWORD" --arg username "$DEMO_USERNAME" '{password:$password, username:$username, status:"active"}')
+    curl -fsS -X PUT "${SUB2API_URL}/api/v1/admin/users/${EXISTING_USER_ID}" \
+      -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "$DEMO_UPDATE_PAYLOAD" >/dev/null
+    echo "Demo user password refreshed: ${DEMO_EMAIL}"
+  else
+    DEMO_CREATE_PAYLOAD=$(jq -nc --arg email "$DEMO_EMAIL" --arg password "$DEMO_PASSWORD" --arg username "$DEMO_USERNAME" '{email:$email,password:$password,username:$username,balance:100,concurrency:2,rpm_limit:120}')
+    curl -fsS -X POST "${SUB2API_URL}/api/v1/admin/users" \
+      -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "$DEMO_CREATE_PAYLOAD" >/dev/null
+    echo "Demo user created: ${DEMO_EMAIL}"
+  fi
+fi
 
 echo "sub2api bootstrap completed."
