@@ -70,7 +70,7 @@ function toUser(user) {
 }
 
 function normalizeKeyStatus(status) {
-  return String(status ?? "").toLowerCase() === "active" ? "active" : "disabled";
+  return String(status ?? "").toLowerCase() === "active" ? "active" : "inactive";
 }
 
 function maskKey(value) {
@@ -89,17 +89,40 @@ function toApiKeyItem(item) {
   const quotaTokens = quotaUsd > 0 ? Math.round(quotaUsd * 1000000) : 0;
   const usedTokens = usedUsd > 0 ? Math.round(usedUsd * 1000000) : 0;
   const groupName = String(item.group?.name ?? item.group?.platform ?? "Default");
+  const status = normalizeKeyStatus(item.status);
 
   return {
     id: Number(item.id),
-    name: item.name,
+    name: String(item.name ?? "API Key"),
     keyValue: item.key ?? "",
     maskedKeyValue: maskKey(item.key ?? ""),
+    key: item.key ?? "",
+    maskedKey: maskKey(item.key ?? ""),
     scope: groupName,
+    group: item.group ?? null,
+    groupId: item.group_id == null ? null : Number(item.group_id),
     quotaTokens,
     usedTokens,
-    status: normalizeKeyStatus(item.status),
-    createdAt: item.created_at
+    quota: quotaUsd,
+    quotaUsed: usedUsd,
+    quotaRemaining: quotaUsd > 0 ? Math.max(0, quotaUsd - usedUsd) : null,
+    rateLimit5h: Number(item.rate_limit_5h ?? 0),
+    rateLimit1d: Number(item.rate_limit_1d ?? 0),
+    rateLimit7d: Number(item.rate_limit_7d ?? 0),
+    usage5h: Number(item.usage_5h ?? 0),
+    usage1d: Number(item.usage_1d ?? 0),
+    usage7d: Number(item.usage_7d ?? 0),
+    reset5hAt: item.reset_5h_at ?? null,
+    reset1dAt: item.reset_1d_at ?? null,
+    reset7dAt: item.reset_7d_at ?? null,
+    expiresAt: item.expires_at ?? null,
+    lastUsedAt: item.last_used_at ?? null,
+    ipWhitelist: Array.isArray(item.ip_whitelist) ? item.ip_whitelist : [],
+    ipBlacklist: Array.isArray(item.ip_blacklist) ? item.ip_blacklist : [],
+    status,
+    rawStatus: String(item.status ?? status),
+    createdAt: item.created_at,
+    raw: item
   };
 }
 
@@ -108,19 +131,111 @@ function toUsageRecord(item) {
   const outputTokens = Number(item.output_tokens ?? 0);
   const cacheCreationTokens = Number(item.cache_creation_tokens ?? 0);
   const cacheReadTokens = Number(item.cache_read_tokens ?? 0);
+  const imageOutputTokens = Number(item.image_output_tokens ?? 0);
   const requestTokens = inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens;
   const endpoint = item.inbound_endpoint ?? item.upstream_endpoint ?? item.request_type ?? "gateway";
+  const actualCost = Number(item.actual_cost ?? item.total_cost ?? 0);
+  const statusCode = Number(item.status_code ?? 200);
 
   return {
     id: Number(item.id),
     model: item.model,
     endpoint,
-    statusCode: Number(item.status_code ?? 200),
+    inboundEndpoint: item.inbound_endpoint ?? "",
+    upstreamEndpoint: item.upstream_endpoint ?? "",
+    statusCode,
+    statusText: statusCode >= 200 && statusCode < 400 ? "success" : "error",
     requestTokens,
-    cost: Number(item.actual_cost ?? item.total_cost ?? 0),
+    inputTokens,
+    outputTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
+    imageOutputTokens,
+    totalTokens: requestTokens + imageOutputTokens,
+    inputCost: Number(item.input_cost ?? 0),
+    outputCost: Number(item.output_cost ?? 0),
+    cacheCreationCost: Number(item.cache_creation_cost ?? 0),
+    cacheReadCost: Number(item.cache_read_cost ?? 0),
+    imageOutputCost: Number(item.image_output_cost ?? 0),
+    standardCost: Number(item.total_cost ?? 0),
+    actualCost,
+    cost: actualCost,
     latencyMs: Number(item.duration_ms ?? item.first_token_ms ?? 0),
+    firstTokenMs: item.first_token_ms == null ? null : Number(item.first_token_ms),
+    durationMs: item.duration_ms == null ? null : Number(item.duration_ms),
+    requestType: item.request_type ?? (item.stream ? "stream" : "sync"),
+    stream: Boolean(item.stream),
+    billingMode: item.billing_mode ?? "",
+    reasoningEffort: item.reasoning_effort ?? "",
+    serviceTier: item.service_tier ?? "",
+    rateMultiplier: Number(item.rate_multiplier ?? 1),
+    userAgent: item.user_agent ?? "",
     createdAt: item.created_at,
-    apiKeyName: item.api_key?.name ?? null
+    apiKeyId: item.api_key_id == null ? null : Number(item.api_key_id),
+    apiKeyName: item.api_key?.name ?? null,
+    apiKey: item.api_key ?? null,
+    raw: item
+  };
+}
+
+function normalizeMonitorStatus(status) {
+  const text = String(status ?? "").toLowerCase();
+  if (["operational", "degraded", "failed", "error"].includes(text)) {
+    return text;
+  }
+  return text || "empty";
+}
+
+function toMonitorTimelinePoint(item) {
+  return {
+    status: normalizeMonitorStatus(item.status),
+    latencyMs: item.latency_ms == null ? null : Number(item.latency_ms),
+    pingLatencyMs: item.ping_latency_ms == null ? null : Number(item.ping_latency_ms),
+    checkedAt: item.checked_at ?? null
+  };
+}
+
+function toChannelMonitorItem(item) {
+  return {
+    id: Number(item.id),
+    name: String(item.name ?? ""),
+    provider: String(item.provider ?? ""),
+    groupName: String(item.group_name ?? ""),
+    primaryModel: String(item.primary_model ?? ""),
+    primaryStatus: normalizeMonitorStatus(item.primary_status),
+    primaryLatencyMs: item.primary_latency_ms == null ? null : Number(item.primary_latency_ms),
+    primaryPingLatencyMs: item.primary_ping_latency_ms == null ? null : Number(item.primary_ping_latency_ms),
+    availability7d: item.availability_7d == null ? null : Number(item.availability_7d),
+    extraModels: Array.isArray(item.extra_models)
+      ? item.extra_models.map((model) => ({
+          model: String(model.model ?? ""),
+          status: normalizeMonitorStatus(model.status),
+          latencyMs: model.latency_ms == null ? null : Number(model.latency_ms)
+        }))
+      : [],
+    timeline: Array.isArray(item.timeline) ? item.timeline.map(toMonitorTimelinePoint) : [],
+    raw: item
+  };
+}
+
+function toChannelMonitorDetail(item) {
+  return {
+    id: Number(item.id),
+    name: String(item.name ?? ""),
+    provider: String(item.provider ?? ""),
+    groupName: String(item.group_name ?? ""),
+    models: Array.isArray(item.models)
+      ? item.models.map((model) => ({
+          model: String(model.model ?? ""),
+          latestStatus: normalizeMonitorStatus(model.latest_status),
+          latestLatencyMs: model.latest_latency_ms == null ? null : Number(model.latest_latency_ms),
+          availability7d: model.availability_7d == null ? null : Number(model.availability_7d),
+          availability15d: model.availability_15d == null ? null : Number(model.availability_15d),
+          availability30d: model.availability_30d == null ? null : Number(model.availability_30d),
+          avgLatency7dMs: model.avg_latency_7d_ms == null ? null : Number(model.avg_latency_7d_ms)
+        }))
+      : [],
+    raw: item
   };
 }
 
@@ -220,6 +335,7 @@ function toOrderItem(item, plansById = new Map()) {
 
 function buildPaymentMethodItems(checkoutInfo) {
   const methods = checkoutInfo.methods ?? {};
+  const methodOrder = ["alipay", "wxpay", "creditcard", "paynow", "crypto", "card", "link", "stripe"];
   const items = [];
 
   for (const methodCode of Object.keys(methods)) {
@@ -232,11 +348,19 @@ function buildPaymentMethodItems(checkoutInfo) {
       currency: limits.currency ?? "CNY",
       singleMin: Number(limits.single_min ?? 0),
       singleMax: Number(limits.single_max ?? 0),
-      dailyLimit: Number(limits.daily_limit ?? 0)
+      dailyLimit: Number(limits.daily_limit ?? 0),
+      dailyUsed: Number(limits.daily_used ?? 0),
+      dailyRemaining: Number(limits.daily_remaining ?? 0),
+      feeRate: Number(limits.fee_rate ?? 0),
+      available: limits.available !== false
     });
   }
 
-  return items;
+  return items.sort((left, right) => {
+    const leftIndex = methodOrder.indexOf(left.methodCode);
+    const rightIndex = methodOrder.indexOf(right.methodCode);
+    return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+  });
 }
 
 function getForwardedOrigin(request) {
@@ -280,8 +404,10 @@ function toCheckoutPlan(plan) {
 }
 
 function toCheckoutInfoResponse(checkoutInfo) {
+  const methods = buildPaymentMethodItems(checkoutInfo);
   return {
-    methods: buildPaymentMethodItems(checkoutInfo),
+    methods,
+    methodCodes: methods.map((method) => method.methodCode),
     plans: Array.isArray(checkoutInfo.plans) ? checkoutInfo.plans.map(toCheckoutPlan) : [],
     globalMin: Number(checkoutInfo.global_min ?? 0),
     globalMax: Number(checkoutInfo.global_max ?? 0),
@@ -386,6 +512,8 @@ function parseUsageFilters(request) {
   const apiKeyId = String(request.query.apiKeyId ?? "").trim();
   const startDate = normalizeDateQuery(request.query.startDate);
   const endDate = normalizeDateQuery(request.query.endDate);
+  const sortBy = String(request.query.sortBy ?? request.query.sort_by ?? "").trim();
+  const sortOrder = String(request.query.sortOrder ?? request.query.sort_order ?? "").trim().toLowerCase() === "asc" ? "asc" : "desc";
 
   return {
     page,
@@ -393,7 +521,9 @@ function parseUsageFilters(request) {
     model,
     apiKeyId,
     startDate,
-    endDate
+    endDate,
+    sortBy,
+    sortOrder
   };
 }
 
@@ -403,7 +533,8 @@ function buildUsageQuery(filters) {
     ...(filters.model ? { model: filters.model } : {}),
     ...(filters.apiKeyId ? { api_key_id: filters.apiKeyId } : {}),
     ...(filters.startDate ? { start_date: filters.startDate } : {}),
-    ...(filters.endDate ? { end_date: filters.endDate } : {})
+    ...(filters.endDate ? { end_date: filters.endDate } : {}),
+    ...(filters.sortBy ? { sort_by: filters.sortBy, sort_order: filters.sortOrder } : {})
   };
 }
 
@@ -412,6 +543,36 @@ function buildUsageStatsQuery(filters) {
     ...(filters.apiKeyId ? { api_key_id: filters.apiKeyId } : {}),
     ...(filters.startDate ? { start_date: filters.startDate } : {}),
     ...(filters.endDate ? { end_date: filters.endDate } : {})
+  };
+}
+
+function parseKeyFilters(request) {
+  const page = parsePositiveInt(request.query.page, 1);
+  const pageSize = Math.min(parsePositiveInt(request.query.pageSize ?? request.query.page_size, 100), 100);
+  const search = String(request.query.search ?? "").trim();
+  const status = String(request.query.status ?? "").trim();
+  const groupId = String(request.query.groupId ?? request.query.group_id ?? "").trim();
+  const sortBy = String(request.query.sortBy ?? request.query.sort_by ?? "created_at").trim();
+  const sortOrder = String(request.query.sortOrder ?? request.query.sort_order ?? "desc").trim().toLowerCase() === "asc" ? "asc" : "desc";
+
+  return {
+    page,
+    pageSize,
+    search,
+    status,
+    groupId,
+    sortBy,
+    sortOrder
+  };
+}
+
+function buildKeyQuery(filters) {
+  return {
+    ...toSub2apiPagination(filters),
+    ...(filters.search ? { search: filters.search } : {}),
+    ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.groupId ? { group_id: filters.groupId } : {}),
+    ...(filters.sortBy ? { sort_by: filters.sortBy, sort_order: filters.sortOrder } : {})
   };
 }
 
@@ -620,19 +781,59 @@ app.get(
 );
 
 app.get(
+  "/api/app/channel-monitors",
+  asyncRoute(requireUser),
+  asyncRoute(async (request, response) => {
+    const result = await sub2apiRequest("/channel-monitors", {
+      token: request.sub2apiToken
+    });
+
+    const items = (result.items ?? []).map(toChannelMonitorItem);
+    const degradedCount = items.filter((item) => item.primaryStatus !== "operational").length;
+    response.json({
+      items,
+      summary: {
+        total: items.length,
+        operational: items.length - degradedCount,
+        degraded: degradedCount,
+        overallStatus: degradedCount === 0 ? "operational" : "degraded"
+      }
+    });
+  })
+);
+
+app.get(
+  "/api/app/channel-monitors/:id/status",
+  asyncRoute(requireUser),
+  asyncRoute(async (request, response) => {
+    const id = Number(request.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      response.status(404).json({ error: "Channel monitor does not exist." });
+      return;
+    }
+
+    const detail = await sub2apiRequest(`/channel-monitors/${id}/status`, {
+      token: request.sub2apiToken
+    });
+    response.json({ item: toChannelMonitorDetail(detail) });
+  })
+);
+
+app.get(
   "/api/app/keys",
   asyncRoute(requireUser),
   asyncRoute(async (request, response) => {
+    const filters = parseKeyFilters(request);
     const result = await sub2apiRequest("/keys", {
       token: request.sub2apiToken,
-      query: {
-        page: 1,
-        page_size: 100
-      }
+      query: buildKeyQuery(filters)
     });
 
     response.json({
-      items: (result.items ?? []).map(toApiKeyItem)
+      items: (result.items ?? []).map(toApiKeyItem),
+      total: Number(result.total ?? 0),
+      page: filters.page,
+      pageSize: filters.pageSize
     });
   })
 );
@@ -647,11 +848,23 @@ app.post(
       return;
     }
 
+    const groupId = Number(request.body.groupId ?? request.body.group_id ?? 0);
+    const quota = Number(request.body.quota ?? 0);
+    const expiresInDays = Number(request.body.expiresInDays ?? request.body.expires_in_days ?? 0);
+    const rateLimit5h = Number(request.body.rateLimit5h ?? request.body.rate_limit_5h ?? 0);
+    const rateLimit1d = Number(request.body.rateLimit1d ?? request.body.rate_limit_1d ?? 0);
+    const rateLimit7d = Number(request.body.rateLimit7d ?? request.body.rate_limit_7d ?? 0);
     const item = await sub2apiRequest("/keys", {
       method: "POST",
       token: request.sub2apiToken,
       body: {
-        name
+        name,
+        ...(Number.isFinite(groupId) && groupId > 0 ? { group_id: groupId } : {}),
+        ...(Number.isFinite(quota) && quota > 0 ? { quota } : {}),
+        ...(Number.isFinite(expiresInDays) && expiresInDays > 0 ? { expires_in_days: expiresInDays } : {}),
+        ...(Number.isFinite(rateLimit5h) && rateLimit5h > 0 ? { rate_limit_5h: rateLimit5h } : {}),
+        ...(Number.isFinite(rateLimit1d) && rateLimit1d > 0 ? { rate_limit_1d: rateLimit1d } : {}),
+        ...(Number.isFinite(rateLimit7d) && rateLimit7d > 0 ? { rate_limit_7d: rateLimit7d } : {})
       }
     });
 
@@ -673,15 +886,26 @@ app.patch(
       token: request.sub2apiToken
     });
 
-    const nextStatus = request.body.status === "active" ? "active" : request.body.status === "disabled" ? "inactive" : current.status;
+    const requestedStatus = String(request.body.status ?? "").toLowerCase();
+    const nextStatus = requestedStatus === "active" ? "active" : requestedStatus === "disabled" || requestedStatus === "inactive" ? "inactive" : current.status;
     const nextName = String(request.body.name ?? current.name).trim() || current.name;
+    const groupId = Number(request.body.groupId ?? request.body.group_id ?? current.group_id ?? 0);
+    const quota = Number(request.body.quota ?? current.quota ?? 0);
+    const rateLimit5h = Number(request.body.rateLimit5h ?? request.body.rate_limit_5h ?? current.rate_limit_5h ?? 0);
+    const rateLimit1d = Number(request.body.rateLimit1d ?? request.body.rate_limit_1d ?? current.rate_limit_1d ?? 0);
+    const rateLimit7d = Number(request.body.rateLimit7d ?? request.body.rate_limit_7d ?? current.rate_limit_7d ?? 0);
 
     const updated = await sub2apiRequest(`/keys/${id}`, {
       method: "PUT",
       token: request.sub2apiToken,
       body: {
         name: nextName,
-        status: nextStatus
+        status: nextStatus,
+        ...(Number.isFinite(groupId) && groupId > 0 ? { group_id: groupId } : {}),
+        ...(Number.isFinite(quota) && quota > 0 ? { quota } : {}),
+        ...(Number.isFinite(rateLimit5h) && rateLimit5h > 0 ? { rate_limit_5h: rateLimit5h } : {}),
+        ...(Number.isFinite(rateLimit1d) && rateLimit1d > 0 ? { rate_limit_1d: rateLimit1d } : {}),
+        ...(Number.isFinite(rateLimit7d) && rateLimit7d > 0 ? { rate_limit_7d: rateLimit7d } : {})
       }
     });
 
@@ -729,7 +953,9 @@ app.get(
         model: filters.model,
         apiKeyId: filters.apiKeyId,
         startDate: filters.startDate,
-        endDate: filters.endDate
+        endDate: filters.endDate,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder
       }
     });
   })

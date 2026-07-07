@@ -1,0 +1,3 @@
+services:
+  sub2api:
+    container_name: allcancode-sub2api

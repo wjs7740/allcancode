@@ -4,15 +4,16 @@ import {
   Activity,
   ArrowRight,
   Banknote,
-  BarChart3,
   Bell,
+  Ban,
   Bot,
+  CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   CreditCard,
   Crown,
   Dices,
-  Gauge,
   Gift,
   GitBranch,
   Globe2,
@@ -25,7 +26,10 @@ import {
   PawPrint,
   Plus,
   RefreshCw,
+  Search,
   ShieldCheck,
+  Terminal,
+  Trash2,
   Trophy,
   UserRound,
   Wallet,
@@ -46,23 +50,93 @@ type ApiKeyItem = {
   id: string;
   name: string;
   secret: string;
+  maskedSecret: string;
   scope: string;
   quota: string;
+  quotaUsd: number;
+  quotaUsedUsd: number;
+  quotaRemainingUsd: number | null;
   usage: number;
   created: string;
-  status: "active" | "paused";
+  createdAt: string;
+  lastUsed: string;
+  expiresAt: string;
+  status: "active" | "inactive" | "quota_exhausted" | "expired";
+  rateLimit5h: number;
+  rateLimit1d: number;
+  rateLimit7d: number;
+  usage5h: number;
+  usage1d: number;
+  usage7d: number;
+  ipRestricted: boolean;
 };
 
 type RequestLog = {
   id: string;
   time: string;
+  createdAt: string;
   model: string;
   endpoint: string;
   keyName: string;
+  statusCode: number;
   status: string;
+  requestType: string;
   tokens: string;
+  inputTokens: string;
+  outputTokens: string;
+  cacheTokens: string;
   cost: string;
+  standardCost: string;
   latency: string;
+  firstToken: string;
+  userAgent: string;
+  billingMode: string;
+};
+
+type ChannelMonitorStatus = "operational" | "degraded" | "failed" | "error" | "empty" | string;
+
+type ChannelMonitorTimelinePoint = {
+  status: ChannelMonitorStatus;
+  latencyMs: number | null;
+  pingLatencyMs: number | null;
+  checkedAt: string | null;
+};
+
+type ChannelMonitorItem = {
+  id: string;
+  name: string;
+  provider: string;
+  groupName: string;
+  primaryModel: string;
+  primaryStatus: ChannelMonitorStatus;
+  primaryLatencyMs: number | null;
+  primaryPingLatencyMs: number | null;
+  availability7d: number | null;
+  extraModels: { model: string; status: ChannelMonitorStatus; latencyMs: number | null }[];
+  timeline: ChannelMonitorTimelinePoint[];
+};
+
+type ChannelMonitorDetail = {
+  id: string;
+  models: {
+    model: string;
+    latestStatus: ChannelMonitorStatus;
+    latestLatencyMs: number | null;
+    availability7d: number | null;
+    availability15d: number | null;
+    availability30d: number | null;
+    avgLatency7dMs: number | null;
+  }[];
+};
+
+type UsageSummary = {
+  totalRequests: number;
+  totalTokens: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheTokens: number;
+  totalActualCost: number;
+  averageDurationMs: number;
 };
 
 type RankingItem = {
@@ -111,6 +185,20 @@ type PaymentMethodItem = {
   currency?: string;
   singleMin?: number;
   singleMax?: number;
+  dailyLimit?: number;
+  dailyRemaining?: number;
+  feeRate?: number;
+  available?: boolean;
+};
+
+type CheckoutInfo = {
+  globalMin: number;
+  globalMax: number;
+  balanceDisabled: boolean;
+  balanceRechargeMultiplier: number;
+  rechargeFeeRate: number;
+  helpText: string;
+  helpImageUrl: string;
 };
 
 type AuthPayload = {
@@ -249,50 +337,93 @@ const copy = {
         success: "成功率"
       },
       overview: {
-        health: "账号组健康",
-        healthText: "核心账号组正常，备用组待命，熔断队列为空。",
-        activity: "实时动向",
-        spend: "消费趋势"
+        health: "渠道监控",
+        healthText: "监控数据来自 sub2api 渠道状态页。",
+        activity: "可用性",
+        spend: "最近检测",
+        window7d: "7 天",
+        window15d: "15 天",
+        window30d: "30 天",
+        operational: "全部正常",
+        degraded: "部分异常",
+        availability: "可用率",
+        latency: "请求延迟",
+        ping: "入口延迟",
+        history: "最近 60 次",
+        extraModels: "扩展模型",
+        empty: "暂无渠道监控数据，请在 sub2api 后台添加渠道监控。"
       },
       keys: {
         title: "我的密钥",
-        subtitle: "当前账户下的 API Key 与调用配额。",
+        subtitle: "按 sub2api 密钥管理字段展示当前账户的 API Key。",
         create: "新建密钥",
+        createPlaceholder: "新密钥名称",
+        search: "搜索名称或 Key",
+        allStatus: "全部状态",
         copy: "复制",
         copied: "已复制",
+        rename: "改名",
+        delete: "删除",
+        use: "使用",
         rotate: "重置",
         disable: "停用",
         enable: "启用",
         active: "启用中",
-        paused: "已停用",
+        inactive: "已停用",
+        quotaExhausted: "配额耗尽",
+        expired: "已过期",
+        group: "分组",
+        rateLimit: "限额",
+        lastUsed: "最后使用",
+        expires: "过期时间",
+        never: "永不过期",
+        noLimit: "不限",
         quota: "配额",
         created: "创建",
         usage: "使用率"
       },
       requests: {
         title: "请求记录",
-        subtitle: "最近网关请求、消耗、状态与延迟。",
+        subtitle: "数据来自 sub2api 请求记录，包含模型、端点、Token、计费与延迟。",
+        refresh: "刷新",
+        allKeys: "全部密钥",
+        startDate: "开始日期",
+        endDate: "结束日期",
         time: "时间",
         model: "模型",
         endpoint: "端点",
         key: "密钥",
+        type: "类型",
         status: "状态",
         tokens: "Tokens",
+        input: "输入",
+        output: "输出",
+        cache: "缓存",
         cost: "费用",
-        latency: "延迟"
+        latency: "总耗时",
+        firstToken: "首包",
+        userAgent: "User Agent"
       },
       recharge: {
         title: "账户充值",
-        subtitle: "余额会用于模型转发、重试和高优先级路由。",
+        subtitle: "Kyren EasyPay 已接入全部兼容支付方式，创建订单后会跳转到支付页。",
         balance: "当前余额",
+        amount: "充值金额",
+        credited: "预计到账",
+        payAmount: "支付金额",
+        fee: "手续费",
+        limit: "单笔限额",
         method: "支付方式",
         submit: "确认充值",
-        done: "充值已入账",
-        methods: ["支付宝", "微信支付", "银行卡"],
+        done: "充值已创建",
+        openPay: "打开支付页",
+        unavailable: "该支付方式当前不可用",
+        methods: ["支付宝", "微信支付", "信用卡", "Crypto", "PayNow"],
         packages: [
-          { id: "starter", amount: 50, bonus: "赠送 3%", label: "轻量接入" },
-          { id: "team", amount: 200, bonus: "赠送 8%", label: "团队常用" },
-          { id: "scale", amount: 500, bonus: "赠送 15%", label: "高频调用" }
+          { id: "starter", amount: 10, bonus: "快速测试", label: "体验" },
+          { id: "team", amount: 50, bonus: "常用金额", label: "标准" },
+          { id: "scale", amount: 200, bonus: "团队充值", label: "团队" },
+          { id: "max", amount: 500, bonus: "高频调用", label: "高频" }
         ]
       },
       lottery: {
@@ -441,50 +572,93 @@ const copy = {
         success: "Success rate"
       },
       overview: {
-        health: "Account Group Health",
-        healthText: "Core account groups are normal, standby groups are ready, and failover queue is empty.",
-        activity: "Live Activity",
-        spend: "Spend Trend"
+        health: "Channel Monitor",
+        healthText: "Monitor data is synced from the sub2api channel status page.",
+        activity: "Availability",
+        spend: "Latest Checks",
+        window7d: "7D",
+        window15d: "15D",
+        window30d: "30D",
+        operational: "Operational",
+        degraded: "Degraded",
+        availability: "Availability",
+        latency: "Request latency",
+        ping: "Endpoint ping",
+        history: "Last 60 checks",
+        extraModels: "Extra models",
+        empty: "No channel monitors yet. Add monitors in the sub2api admin panel."
       },
       keys: {
         title: "My Keys",
-        subtitle: "API keys and quotas under the current account.",
+        subtitle: "API key management fields are synced from sub2api.",
         create: "New key",
+        createPlaceholder: "New key name",
+        search: "Search name or key",
+        allStatus: "All status",
         copy: "Copy",
         copied: "Copied",
+        rename: "Rename",
+        delete: "Delete",
+        use: "Use",
         rotate: "Rotate",
         disable: "Disable",
         enable: "Enable",
         active: "Active",
-        paused: "Paused",
+        inactive: "Inactive",
+        quotaExhausted: "Quota exhausted",
+        expired: "Expired",
+        group: "Group",
+        rateLimit: "Rate limit",
+        lastUsed: "Last used",
+        expires: "Expires",
+        never: "Never",
+        noLimit: "Unlimited",
         quota: "Quota",
         created: "Created",
         usage: "Usage"
       },
       requests: {
         title: "Request Records",
-        subtitle: "Recent gateway requests, usage, status, and latency.",
+        subtitle: "Request log data comes from sub2api usage records.",
+        refresh: "Refresh",
+        allKeys: "All keys",
+        startDate: "Start date",
+        endDate: "End date",
         time: "Time",
         model: "Model",
         endpoint: "Endpoint",
         key: "Key",
+        type: "Type",
         status: "Status",
         tokens: "Tokens",
+        input: "Input",
+        output: "Output",
+        cache: "Cache",
         cost: "Cost",
-        latency: "Latency"
+        latency: "Duration",
+        firstToken: "First token",
+        userAgent: "User Agent"
       },
       recharge: {
         title: "Recharge",
-        subtitle: "Balance covers model routing, retries, and priority traffic.",
+        subtitle: "Kyren EasyPay methods are connected. Orders open the hosted payment page.",
         balance: "Current balance",
+        amount: "Recharge amount",
+        credited: "Credited balance",
+        payAmount: "Pay amount",
+        fee: "Fee",
+        limit: "Per-order limit",
         method: "Payment method",
         submit: "Confirm recharge",
-        done: "Balance updated",
-        methods: ["Alipay", "WeChat Pay", "Bank card"],
+        done: "Order created",
+        openPay: "Open payment page",
+        unavailable: "This method is unavailable",
+        methods: ["Alipay", "WeChat Pay", "Credit Card", "Crypto", "PayNow"],
         packages: [
-          { id: "starter", amount: 50, bonus: "3% bonus", label: "Starter" },
-          { id: "team", amount: 200, bonus: "8% bonus", label: "Team" },
-          { id: "scale", amount: 500, bonus: "15% bonus", label: "Scale" }
+          { id: "starter", amount: 10, bonus: "Quick test", label: "Trial" },
+          { id: "team", amount: 50, bonus: "Common amount", label: "Standard" },
+          { id: "scale", amount: 200, bonus: "Team recharge", label: "Team" },
+          { id: "max", amount: 500, bonus: "High volume", label: "Scale" }
         ]
       },
       lottery: {
@@ -578,6 +752,8 @@ function getInitialLocale(): Locale {
 }
 
 function maskKey(secret: string) {
+  if (!secret) return "";
+  if (secret.includes("...") || secret.length <= 14) return secret;
   return `${secret.slice(0, 8)}••••••${secret.slice(-4)}`;
 }
 
@@ -620,38 +796,122 @@ function formatDate(value: string) {
   return date.toISOString().slice(0, 10);
 }
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString([], { hour12: false });
+}
+
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+function formatUsd(value: number, digits = 4) {
+  if (!Number.isFinite(value)) return "$0.0000";
+  return `$${value.toFixed(digits)}`;
+}
+
+function formatDuration(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  if (value < 1000) return `${Math.round(value)}ms`;
+  return `${(value / 1000).toFixed(2)}s`;
+}
+
+function formatPercent(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "-";
+  return `${value.toFixed(2)}%`;
+}
+
+function normalizeStatusText(value: string) {
+  const status = value.toLowerCase();
+  if (["disabled", "paused"].includes(status)) return "inactive";
+  return status || "inactive";
+}
+
 function toDashboardKey(item: any): ApiKeyItem {
   const quota = Number(item.quotaTokens ?? 0);
   const used = Number(item.usedTokens ?? 0);
+  const quotaUsd = Number(item.quota ?? 0);
+  const quotaUsedUsd = Number(item.quotaUsed ?? item.quota_used ?? 0);
+  const secret = String(item.keyValue ?? item.key ?? item.maskedKeyValue ?? item.maskedKey ?? "");
+  const status = normalizeStatusText(String(item.status ?? item.rawStatus ?? ""));
   return {
     id: String(item.id),
     name: String(item.name ?? "API Key"),
-    secret: String(item.keyValue ?? item.maskedKeyValue ?? ""),
+    secret,
+    maskedSecret: String(item.maskedKeyValue ?? item.maskedKey ?? maskKey(secret)),
     scope: String(item.scope ?? "All models"),
-    quota: `${formatTokenCount(quota)} tokens`,
+    quota: quotaUsd > 0 ? `${formatUsd(quotaUsedUsd, 2)} / ${formatUsd(quotaUsd, 2)}` : "Unlimited",
+    quotaUsd,
+    quotaUsedUsd,
+    quotaRemainingUsd: item.quotaRemaining == null ? null : Number(item.quotaRemaining),
     usage: quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0,
     created: formatDate(String(item.createdAt ?? "")),
-    status: item.status === "disabled" ? "paused" : "active"
+    createdAt: String(item.createdAt ?? ""),
+    lastUsed: formatDateTime(item.lastUsedAt),
+    expiresAt: item.expiresAt ? formatDateTime(item.expiresAt) : "",
+    status: (["active", "inactive", "quota_exhausted", "expired"].includes(status) ? status : "inactive") as ApiKeyItem["status"],
+    rateLimit5h: Number(item.rateLimit5h ?? 0),
+    rateLimit1d: Number(item.rateLimit1d ?? 0),
+    rateLimit7d: Number(item.rateLimit7d ?? 0),
+    usage5h: Number(item.usage5h ?? 0),
+    usage1d: Number(item.usage1d ?? 0),
+    usage7d: Number(item.usage7d ?? 0),
+    ipRestricted: (Array.isArray(item.ipWhitelist) && item.ipWhitelist.length > 0) || (Array.isArray(item.ipBlacklist) && item.ipBlacklist.length > 0)
   };
 }
 
 function toRequestLog(item: any): RequestLog {
+  const inputTokens = Number(item.inputTokens ?? 0);
+  const outputTokens = Number(item.outputTokens ?? 0);
+  const cacheTokens = Number(item.cacheCreationTokens ?? 0) + Number(item.cacheReadTokens ?? 0);
+  const statusCode = Number(item.statusCode ?? 0);
   return {
     id: String(item.id),
     time: formatTime(String(item.createdAt ?? "")),
+    createdAt: String(item.createdAt ?? ""),
     model: String(item.model ?? "-"),
-    endpoint: String(item.endpoint ?? "-"),
+    endpoint: String(item.inboundEndpoint ?? item.endpoint ?? "-"),
     keyName: String(item.apiKeyName ?? "-"),
-    status: String(item.statusCode ?? "-"),
+    statusCode,
+    status: statusCode > 0 ? String(statusCode) : "-",
+    requestType: String(item.requestType ?? (item.stream ? "stream" : "sync")),
     tokens: formatTokenCount(Number(item.requestTokens ?? 0)),
-    cost: `¥${Number(item.cost ?? 0).toFixed(2)}`,
-    latency: `${Number(item.latencyMs ?? 0)}ms`
+    inputTokens: formatTokenCount(inputTokens),
+    outputTokens: formatTokenCount(outputTokens),
+    cacheTokens: formatTokenCount(cacheTokens),
+    cost: formatUsd(Number(item.actualCost ?? item.cost ?? 0), 6),
+    standardCost: formatUsd(Number(item.standardCost ?? 0), 6),
+    latency: formatDuration(Number(item.durationMs ?? item.latencyMs ?? 0)),
+    firstToken: formatDuration(item.firstTokenMs),
+    userAgent: String(item.userAgent ?? "-") || "-",
+    billingMode: String(item.billingMode ?? "-") || "-"
+  };
+}
+
+function toChannelMonitor(item: any): ChannelMonitorItem {
+  return {
+    id: String(item.id),
+    name: String(item.name ?? ""),
+    provider: String(item.provider ?? ""),
+    groupName: String(item.groupName ?? ""),
+    primaryModel: String(item.primaryModel ?? ""),
+    primaryStatus: String(item.primaryStatus ?? "empty"),
+    primaryLatencyMs: item.primaryLatencyMs == null ? null : Number(item.primaryLatencyMs),
+    primaryPingLatencyMs: item.primaryPingLatencyMs == null ? null : Number(item.primaryPingLatencyMs),
+    availability7d: item.availability7d == null ? null : Number(item.availability7d),
+    extraModels: Array.isArray(item.extraModels) ? item.extraModels : [],
+    timeline: Array.isArray(item.timeline) ? item.timeline : []
+  };
+}
+
+function toChannelMonitorDetail(item: any): ChannelMonitorDetail {
+  return {
+    id: String(item.id),
+    models: Array.isArray(item.models) ? item.models : []
   };
 }
 
@@ -677,6 +937,70 @@ function toSnapshot(payload: any): DashboardSnapshot {
     remainingTokens: formatTokenCount(Number(summary.remainingTokens ?? summary.totalTokens ?? 0)),
     activity: Array.isArray(payload?.recentActivity) ? payload.recentActivity : [],
     spendBars: trend.length > 0 ? trend.slice(-7).map((item: any) => Math.max(8, Math.round((Number(item.requests ?? 0) / maxRequests) * 100))) : []
+  };
+}
+
+function getStatusLabel(status: string, copy: PageCopy) {
+  const key = normalizeStatusText(status);
+  if (key === "active") return copy.dashboard.keys.active;
+  if (key === "quota_exhausted") return copy.dashboard.keys.quotaExhausted;
+  if (key === "expired") return copy.dashboard.keys.expired;
+  return copy.dashboard.keys.inactive;
+}
+
+function getMonitorStatusLabel(status: ChannelMonitorStatus, copy: PageCopy) {
+  const value = String(status).toLowerCase();
+  if (value === "operational") return copy.dashboard.overview.operational;
+  if (value === "degraded") return copy.dashboard.overview.degraded;
+  if (value === "failed") return "Failed";
+  if (value === "error") return "Error";
+  return "-";
+}
+
+function getPaymentMethodLabel(methodCode: string, locale: Locale) {
+  const code = methodCode.toLowerCase();
+  const zh: Record<string, string> = {
+    alipay: "支付宝",
+    wxpay: "微信支付",
+    creditcard: "信用卡",
+    crypto: "Crypto",
+    paynow: "PayNow",
+    card: "银行卡",
+    link: "Link",
+    stripe: "Stripe"
+  };
+  const en: Record<string, string> = {
+    alipay: "Alipay",
+    wxpay: "WeChat Pay",
+    creditcard: "Credit Card",
+    crypto: "Crypto",
+    paynow: "PayNow",
+    card: "Card",
+    link: "Link",
+    stripe: "Stripe"
+  };
+  return (locale === "zh" ? zh : en)[code] ?? methodCode;
+}
+
+function getPaymentMethodIcon(methodCode: string) {
+  const code = methodCode.toLowerCase();
+  if (code === "creditcard" || code === "card" || code === "stripe") return CreditCard;
+  if (code === "crypto") return Globe2;
+  if (code === "paynow") return Wallet;
+  if (code === "wxpay") return MessageSquare;
+  return Banknote;
+}
+
+function buildUsageSummary(payload: any): UsageSummary {
+  const summary = payload?.summary ?? {};
+  return {
+    totalRequests: Number(summary.totalRequests ?? 0),
+    totalTokens: Number(summary.totalTokens ?? 0),
+    totalInputTokens: Number(summary.totalInputTokens ?? 0),
+    totalOutputTokens: Number(summary.totalOutputTokens ?? 0),
+    totalCacheTokens: Number(summary.totalCacheTokens ?? 0),
+    totalActualCost: Number(summary.totalActualCost ?? 0),
+    averageDurationMs: Number(summary.averageDurationMs ?? 0)
   };
 }
 
@@ -895,8 +1219,29 @@ function DashboardPage({
   const d = copy.dashboard;
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
   const [requestItems, setRequestItems] = useState<RequestLog[]>([]);
+  const [usageSummary, setUsageSummary] = useState<UsageSummary>({
+    totalRequests: 0,
+    totalTokens: 0,
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCacheTokens: 0,
+    totalActualCost: 0,
+    averageDurationMs: 0
+  });
+  const [channelMonitors, setChannelMonitors] = useState<ChannelMonitorItem[]>([]);
+  const [monitorDetails, setMonitorDetails] = useState<Record<string, ChannelMonitorDetail>>({});
+  const [monitorWindow, setMonitorWindow] = useState<"7d" | "15d" | "30d">("7d");
   const [rankingItems, setRankingItems] = useState<RankingItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodItem[]>([]);
+  const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo>({
+    globalMin: 0,
+    globalMax: 0,
+    balanceDisabled: false,
+    balanceRechargeMultiplier: 1,
+    rechargeFeeRate: 0,
+    helpText: "",
+    helpImageUrl: ""
+  });
   const [dashboard, setDashboard] = useState<DashboardSnapshot>({
     balance: 0,
     todayRequests: 0,
@@ -908,9 +1253,18 @@ function DashboardPage({
     spendBars: []
   });
   const [selectedPackageId, setSelectedPackageId] = useState<string>(d.recharge.packages[1].id);
-  const [paymentMethod, setPaymentMethod] = useState<string>(d.recharge.methods[0]);
+  const [rechargeAmount, setRechargeAmount] = useState<number>(d.recharge.packages[1].amount);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [rechargeStatus, setRechargeStatus] = useState("");
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  const [keySearch, setKeySearch] = useState("");
+  const [keyStatusFilter, setKeyStatusFilter] = useState("");
+  const [newKeyName, setNewKeyName] = useState("");
+  const [busyKeyId, setBusyKeyId] = useState<string | null>(null);
+  const [requestKeyFilter, setRequestKeyFilter] = useState("");
+  const [requestStartDate, setRequestStartDate] = useState("");
+  const [requestEndDate, setRequestEndDate] = useState("");
+  const [requestLoading, setRequestLoading] = useState(false);
   const [drawsLeft, setDrawsLeft] = useState(2);
   const [latestPrize, setLatestPrize] = useState<LotteryPrize | null>(null);
   const [copiedPrizeCode, setCopiedPrizeCode] = useState(false);
@@ -919,10 +1273,38 @@ function DashboardPage({
   const activeKeys = dashboard.activeKeys || keys.filter((item) => item.status === "active").length;
   const totalKeys = dashboard.totalKeys || keys.length;
   const balance = user?.balance ?? dashboard.balance;
-  const methodOptions = useMemo(
-    () => (paymentMethods.length > 0 ? paymentMethods : d.recharge.methods.map((method) => ({ methodCode: method, methodName: method }))),
-    [d.recharge.methods, paymentMethods]
+  const methodOptions = useMemo<PaymentMethodItem[]>(
+    () =>
+      paymentMethods.length > 0
+        ? paymentMethods
+        : ["alipay", "wxpay", "creditcard", "crypto", "paynow"].map((methodCode) => ({
+            methodCode,
+            methodName: getPaymentMethodLabel(methodCode, locale),
+            available: true
+          })),
+    [locale, paymentMethods]
   );
+  const selectedMethod = methodOptions.find((method) => method.methodCode === paymentMethod) ?? methodOptions[0];
+  const feeAmount = checkoutInfo.rechargeFeeRate > 0 ? Math.ceil(((rechargeAmount * checkoutInfo.rechargeFeeRate) / 100) * 100) / 100 : 0;
+  const payAmount = Math.round((rechargeAmount + feeAmount) * 100) / 100;
+  const creditedAmount = Math.round(rechargeAmount * Math.max(checkoutInfo.balanceRechargeMultiplier, 0) * 100) / 100;
+  const amountError = useMemo(() => {
+    if (rechargeAmount <= 0) return locale === "zh" ? "请输入有效充值金额。" : "Enter a valid recharge amount.";
+    if (checkoutInfo.globalMin > 0 && rechargeAmount < checkoutInfo.globalMin) return locale === "zh" ? `最低充值 ¥${checkoutInfo.globalMin.toFixed(2)}。` : `Minimum recharge is CNY ${checkoutInfo.globalMin.toFixed(2)}.`;
+    if (checkoutInfo.globalMax > 0 && rechargeAmount > checkoutInfo.globalMax) return locale === "zh" ? `最高充值 ¥${checkoutInfo.globalMax.toFixed(2)}。` : `Maximum recharge is CNY ${checkoutInfo.globalMax.toFixed(2)}.`;
+    if (selectedMethod?.singleMin && rechargeAmount < selectedMethod.singleMin) return locale === "zh" ? `${getPaymentMethodLabel(selectedMethod.methodCode, locale)} 最低 ¥${selectedMethod.singleMin.toFixed(2)}。` : `${getPaymentMethodLabel(selectedMethod.methodCode, locale)} minimum is CNY ${selectedMethod.singleMin.toFixed(2)}.`;
+    if (selectedMethod?.singleMax && rechargeAmount > selectedMethod.singleMax) return locale === "zh" ? `${getPaymentMethodLabel(selectedMethod.methodCode, locale)} 最高 ¥${selectedMethod.singleMax.toFixed(2)}。` : `${getPaymentMethodLabel(selectedMethod.methodCode, locale)} maximum is CNY ${selectedMethod.singleMax.toFixed(2)}.`;
+    if (selectedMethod && selectedMethod.available === false) return d.recharge.unavailable;
+    return "";
+  }, [checkoutInfo.globalMax, checkoutInfo.globalMin, d.recharge.unavailable, locale, rechargeAmount, selectedMethod]);
+  const visibleKeys = useMemo(() => {
+    const query = keySearch.trim().toLowerCase();
+    return keys.filter((item) => {
+      if (keyStatusFilter && item.status !== keyStatusFilter) return false;
+      if (!query) return true;
+      return `${item.name} ${item.secret} ${item.maskedSecret} ${item.scope}`.toLowerCase().includes(query);
+    });
+  }, [keySearch, keyStatusFilter, keys]);
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat(locale === "zh" ? "zh-CN" : "en-US", {
@@ -933,9 +1315,9 @@ function DashboardPage({
   );
 
   useEffect(() => {
-    setPaymentMethod((current) => current || methodOptions[0]?.methodCode || d.recharge.methods[0]);
+    setPaymentMethod((current) => (methodOptions.some((method) => method.methodCode === current) ? current : methodOptions[0]?.methodCode ?? ""));
     setRechargeStatus("");
-  }, [d.recharge.methods, methodOptions]);
+  }, [methodOptions]);
 
   useEffect(() => {
     if (!token) return;
@@ -944,17 +1326,38 @@ function DashboardPage({
     Promise.all([
       apiRequest<any>("/dashboard", { token }),
       apiRequest<{ items: any[] }>("/keys", { token }),
-      apiRequest<{ items: any[] }>("/usage?page=1&pageSize=20", { token }),
+      apiRequest<any>("/usage?page=1&pageSize=20&sortBy=created_at&sortOrder=desc", { token }),
+      apiRequest<{ items: any[]; summary?: unknown }>("/channel-monitors", { token }).catch(() => ({ items: [] })),
       apiRequest<{ items: any[] }>("/ranking?limit=10", { token }),
-      apiRequest<{ items: PaymentMethodItem[] }>("/payment/methods", { token }).catch(() => ({ items: [] }))
+      apiRequest<{ methods: PaymentMethodItem[] } & CheckoutInfo>("/payment/checkout-info", { token }).catch(() => ({
+        methods: [],
+        globalMin: 0,
+        globalMax: 0,
+        balanceDisabled: false,
+        balanceRechargeMultiplier: 1,
+        rechargeFeeRate: 0,
+        helpText: "",
+        helpImageUrl: ""
+      }))
     ])
-      .then(([dashboardPayload, keyPayload, usagePayload, rankingPayload, methodPayload]) => {
+      .then(([dashboardPayload, keyPayload, usagePayload, monitorPayload, rankingPayload, checkoutPayload]) => {
         if (cancelled) return;
         setDashboard(toSnapshot(dashboardPayload));
         setKeys((keyPayload.items ?? []).map(toDashboardKey));
         setRequestItems((usagePayload.items ?? []).map(toRequestLog));
+        setUsageSummary(buildUsageSummary(usagePayload));
+        setChannelMonitors((monitorPayload.items ?? []).map(toChannelMonitor));
         setRankingItems((rankingPayload.items ?? []).map(toRankingItem));
-        setPaymentMethods(methodPayload.items ?? []);
+        setPaymentMethods(checkoutPayload.methods ?? []);
+        setCheckoutInfo({
+          globalMin: Number(checkoutPayload.globalMin ?? 0),
+          globalMax: Number(checkoutPayload.globalMax ?? 0),
+          balanceDisabled: Boolean(checkoutPayload.balanceDisabled),
+          balanceRechargeMultiplier: Number(checkoutPayload.balanceRechargeMultiplier ?? 1),
+          rechargeFeeRate: Number(checkoutPayload.rechargeFeeRate ?? 0),
+          helpText: String(checkoutPayload.helpText ?? ""),
+          helpImageUrl: String(checkoutPayload.helpImageUrl ?? "")
+        });
       })
       .catch((error) => {
         if (!cancelled) setRechargeStatus(error instanceof Error ? error.message : "Unable to sync account data.");
@@ -965,20 +1368,50 @@ function DashboardPage({
     };
   }, [token]);
 
+  useEffect(() => {
+    if (!token || monitorWindow === "7d" || channelMonitors.length === 0) return;
+    const missing = channelMonitors.filter((item) => !monitorDetails[item.id]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      missing.map((item) =>
+        apiRequest<{ item: any }>(`/channel-monitors/${item.id}/status`, { token })
+          .then((payload) => [item.id, toChannelMonitorDetail(payload.item)] as const)
+          .catch(() => null)
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setMonitorDetails((current) => {
+        const next = { ...current };
+        for (const entry of entries) {
+          if (entry) next[entry[0]] = entry[1];
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [channelMonitors, monitorDetails, monitorWindow, token]);
+
   const createKey = () => {
     if (!token) {
       setRechargeStatus(locale === "zh" ? "请先登录后再创建 Key。" : "Please sign in before creating a key.");
       return;
     }
 
+    const name = newKeyName.trim() || (locale === "zh" ? "个人密钥" : "Personal Key");
     apiRequest<{ item: any }>("/keys", {
       method: "POST",
       token,
       body: {
-        name: locale === "zh" ? "个人密钥" : "Personal Key"
+        name
       }
     })
-      .then((payload) => setKeys((current) => [toDashboardKey(payload.item), ...current]))
+      .then((payload) => {
+        setKeys((current) => [toDashboardKey(payload.item), ...current]);
+        setNewKeyName("");
+      })
       .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to create key."));
     onSectionChange("keys");
   };
@@ -990,14 +1423,55 @@ function DashboardPage({
       return;
     }
 
-    const nextStatus = item.status === "active" ? "disabled" : "active";
+    const nextStatus = item.status === "active" ? "inactive" : "active";
+    setBusyKeyId(id);
     apiRequest<{ item: any }>(`/keys/${id}`, { method: "PATCH", token, body: { status: nextStatus } })
       .then((payload) => setKeys((current) => current.map((key) => (key.id === id ? toDashboardKey(payload.item) : key))))
-      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to update key."));
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to update key."))
+      .finally(() => setBusyKeyId(null));
   };
 
-  const rotateKey = (id: string) => {
-    setRechargeStatus(locale === "zh" ? "sub2api 暂未开放前端重置 Key 接口，请在管理端处理。" : "Key rotation is not available from the user API yet.");
+  const renameKey = (item: ApiKeyItem) => {
+    if (!token) return;
+    const nextName = window.prompt(locale === "zh" ? "输入新的密钥名称" : "Enter a new key name", item.name)?.trim();
+    if (!nextName || nextName === item.name) return;
+    setBusyKeyId(item.id);
+    apiRequest<{ item: any }>(`/keys/${item.id}`, { method: "PATCH", token, body: { name: nextName, status: item.status } })
+      .then((payload) => setKeys((current) => current.map((key) => (key.id === item.id ? toDashboardKey(payload.item) : key))))
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to rename key."))
+      .finally(() => setBusyKeyId(null));
+  };
+
+  const deleteKey = (item: ApiKeyItem) => {
+    if (!token) return;
+    const confirmed = window.confirm(locale === "zh" ? `确定删除 ${item.name}？` : `Delete ${item.name}?`);
+    if (!confirmed) return;
+    setBusyKeyId(item.id);
+    apiRequest<{ ok: boolean }>(`/keys/${item.id}`, { method: "DELETE", token })
+      .then(() => setKeys((current) => current.filter((key) => key.id !== item.id)))
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to delete key."))
+      .finally(() => setBusyKeyId(null));
+  };
+
+  const refreshUsageRecords = () => {
+    if (!token) return;
+    const params = new URLSearchParams({
+      page: "1",
+      pageSize: "20",
+      sortBy: "created_at",
+      sortOrder: "desc"
+    });
+    if (requestKeyFilter) params.set("apiKeyId", requestKeyFilter);
+    if (requestStartDate) params.set("startDate", requestStartDate);
+    if (requestEndDate) params.set("endDate", requestEndDate);
+    setRequestLoading(true);
+    apiRequest<any>(`/usage?${params.toString()}`, { token })
+      .then((payload) => {
+        setRequestItems((payload.items ?? []).map(toRequestLog));
+        setUsageSummary(buildUsageSummary(payload));
+      })
+      .catch((error) => setRechargeStatus(error instanceof Error ? error.message : "Unable to load usage records."))
+      .finally(() => setRequestLoading(false));
   };
 
   const copyKey = (key: ApiKeyItem) => {
@@ -1011,19 +1485,23 @@ function DashboardPage({
       setRechargeStatus(locale === "zh" ? "请先登录后再发起充值。" : "Please sign in before recharging.");
       return;
     }
+    if (!selectedMethod || amountError) {
+      setRechargeStatus(amountError || (locale === "zh" ? "请选择支付方式。" : "Select a payment method."));
+      return;
+    }
 
     apiRequest<{ checkout?: { submitUrl?: string }; item?: unknown }>("/orders", {
       method: "POST",
       token,
       body: {
         packageName: selectedPackage.label,
-        amount: selectedPackage.amount,
+        amount: rechargeAmount,
         bonusAmount: 0,
-        methodCode: paymentMethod
+        methodCode: selectedMethod.methodCode
       }
     })
       .then((payload) => {
-        setRechargeStatus(`${d.recharge.done} · ${paymentMethod}`);
+        setRechargeStatus(`${d.recharge.done} · ${getPaymentMethodLabel(selectedMethod.methodCode, locale)}`);
         if (payload.checkout?.submitUrl) {
           window.open(payload.checkout.submitUrl, "_blank", "noopener,noreferrer");
         }
@@ -1044,6 +1522,16 @@ function DashboardPage({
     navigator.clipboard?.writeText(latestPrize.code).catch(() => undefined);
     setCopiedPrizeCode(true);
     window.setTimeout(() => setCopiedPrizeCode(false), 1400);
+  };
+
+  const degradedMonitorCount = channelMonitors.filter((item) => item.primaryStatus !== "operational").length;
+  const overallMonitorStatus = degradedMonitorCount === 0 ? "operational" : "degraded";
+  const resolveMonitorAvailability = (item: ChannelMonitorItem) => {
+    if (monitorWindow === "7d") return item.availability7d;
+    const detail = monitorDetails[item.id];
+    const model = detail?.models.find((entry) => entry.model === item.primaryModel);
+    if (!model) return item.availability7d;
+    return monitorWindow === "15d" ? model.availability15d : model.availability30d;
   };
 
   return (
@@ -1077,54 +1565,84 @@ function DashboardPage({
                 <MetricCard icon={ShieldCheck} label={d.stats.success} value={`${dashboard.successRate.toFixed(2)}%`} tone="gold" />
               </section>
 
-              <section className="overview-grid">
-                <article className="dashboard-panel health-panel">
-                  <div className="panel-heading">
-                    <Gauge size={19} />
-                    <h3>{d.overview.health}</h3>
+              <section className="monitor-section">
+                <div className="monitor-toolbar">
+                  <div className="monitor-tabs" role="tablist" aria-label={d.overview.availability}>
+                    {[
+                      ["7d", d.overview.window7d],
+                      ["15d", d.overview.window15d],
+                      ["30d", d.overview.window30d]
+                    ].map(([id, label]) => (
+                      <button className={monitorWindow === id ? "is-active" : ""} key={id} type="button" role="tab" aria-selected={monitorWindow === id} onClick={() => setMonitorWindow(id as "7d" | "15d" | "30d")}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                  <div className="health-orbit">
-                    <span />
-                    <strong>{activeKeys}/{totalKeys}</strong>
-                    <small>{d.keys.active}</small>
-                  </div>
-                  <p>{d.overview.healthText}</p>
-                </article>
+                  <span className={`monitor-status-chip status-${overallMonitorStatus}`}>
+                    <i />
+                    {getMonitorStatusLabel(overallMonitorStatus, copy)}
+                  </span>
+                  <button className="icon-action" type="button" onClick={() => window.location.reload()} title={locale === "zh" ? "刷新" : "Refresh"}>
+                    <RefreshCw size={17} />
+                  </button>
+                </div>
 
-                <article className="dashboard-panel">
-                  <div className="panel-heading">
-                    <Activity size={19} />
-                    <h3>{d.overview.activity}</h3>
-                  </div>
-                  <div className="activity-feed">
-                    {dashboard.activity.length > 0 ? (
-                      dashboard.activity.map((item) => (
-                        <div className="activity-item" key={item}>
-                          <span />
-                          <p>{item}</p>
+                {channelMonitors.length > 0 ? (
+                  <div className="monitor-grid">
+                    {channelMonitors.map((item) => (
+                      <article className="monitor-card" key={item.id}>
+                        <div className="monitor-card-head">
+                          <span className={`monitor-provider-icon provider-${item.provider}`}>
+                            <Globe2 size={19} />
+                          </span>
+                          <div>
+                            <h3>{item.name}</h3>
+                            <p>
+                              <span className="provider-badge">{item.provider || "-"}</span>
+                              <code>{item.primaryModel || "-"}</code>
+                              {item.groupName && <span className="group-chip">{item.groupName}</span>}
+                            </p>
+                          </div>
+                          <span className={`status-badge status-${item.primaryStatus}`}>{getMonitorStatusLabel(item.primaryStatus, copy)}</span>
                         </div>
-                      ))
-                    ) : (
-                      <p className="empty-state">{locale === "zh" ? "暂无真实调用记录。" : "No real usage activity yet."}</p>
-                    )}
-                  </div>
-                </article>
 
-                <article className="dashboard-panel spend-panel">
-                  <div className="panel-heading">
-                    <BarChart3 size={19} />
-                    <h3>{d.overview.spend}</h3>
+                        <div className="monitor-metrics">
+                          <div>
+                            <span>{d.overview.latency}</span>
+                            <strong>{formatDuration(item.primaryLatencyMs)}</strong>
+                          </div>
+                          <div>
+                            <span>{d.overview.ping}</span>
+                            <strong>{formatDuration(item.primaryPingLatencyMs)}</strong>
+                          </div>
+                        </div>
+
+                        <div className="monitor-availability">
+                          <span>{d.overview.availability} · {monitorWindow.toUpperCase()}</span>
+                          <strong>{formatPercent(resolveMonitorAvailability(item))}</strong>
+                          {item.extraModels.length > 0 && <small>{d.overview.extraModels} {item.extraModels.length}</small>}
+                        </div>
+
+                        <div className="monitor-timeline" aria-label={d.overview.history}>
+                          <div className="timeline-labels">
+                            <span>{d.overview.history}</span>
+                            <span>{d.overview.spend}</span>
+                          </div>
+                          <div className="timeline-bars">
+                            {Array.from({ length: 60 }).map((_, index) => {
+                              const points = [...item.timeline].slice(0, 60).reverse();
+                              const point = points[index - Math.max(0, 60 - points.length)];
+                              const status = point?.status ?? "empty";
+                              return <i className={`timeline-bar status-${status}`} key={index} title={point ? `${formatDateTime(point.checkedAt)} · ${getMonitorStatusLabel(status, copy)} · ${formatDuration(point.latencyMs)}` : ""} />;
+                            })}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                  <div className="spend-chart" aria-hidden="true">
-                    {dashboard.spendBars.length > 0 ? (
-                      dashboard.spendBars.map((height, index) => (
-                        <span key={index} style={{ height: `${height}%` }} />
-                      ))
-                    ) : (
-                      <p className="empty-state">{locale === "zh" ? "暂无趋势数据。" : "No trend data yet."}</p>
-                    )}
-                  </div>
-                </article>
+                ) : (
+                  <p className="empty-state">{d.overview.empty}</p>
+                )}
               </section>
             </motion.div>
           )}
@@ -1132,78 +1650,163 @@ function DashboardPage({
           {activeSection === "keys" && (
             <motion.div key="keys" className="dashboard-content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
               <SectionHeading title={d.keys.title} subtitle={d.keys.subtitle}>
-                <button className="section-action" type="button" onClick={createKey}>
+                <button className="section-action" type="button" onClick={createKey} disabled={busyKeyId === "new"}>
                   <Plus size={17} />
                   <span>{d.keys.create}</span>
                 </button>
               </SectionHeading>
 
-              <div className="key-list">
-                {keys.length > 0 ? keys.map((item) => (
-                  <article className="key-row" key={item.id}>
-                    <div className="key-main">
-                      <span className={`key-status ${item.status}`} />
-                      <div>
-                        <h3>{item.name}</h3>
-                        <code>{maskKey(item.secret)}</code>
-                      </div>
-                    </div>
-                    <div className="key-meta">
-                      <span>{item.scope}</span>
-                      <span>
-                        {d.keys.quota}: {item.quota}
-                      </span>
-                      <span>
-                        {d.keys.created}: {item.created}
-                      </span>
-                    </div>
-                    <div className="usage-track" aria-label={`${d.keys.usage} ${item.usage}%`}>
-                      <span style={{ width: `${item.usage}%` }} />
-                    </div>
-                    <div className="key-actions">
+              <div className="key-toolbar">
+                <label className="table-filter">
+                  <Search size={16} />
+                  <input value={keySearch} onChange={(event) => setKeySearch(event.currentTarget.value)} placeholder={d.keys.search} />
+                </label>
+                <select value={keyStatusFilter} onChange={(event) => setKeyStatusFilter(event.currentTarget.value)} aria-label={d.keys.allStatus}>
+                  <option value="">{d.keys.allStatus}</option>
+                  <option value="active">{d.keys.active}</option>
+                  <option value="inactive">{d.keys.inactive}</option>
+                  <option value="quota_exhausted">{d.keys.quotaExhausted}</option>
+                  <option value="expired">{d.keys.expired}</option>
+                </select>
+                <label className="table-filter create-key-filter">
+                  <KeyRound size={16} />
+                  <input value={newKeyName} onChange={(event) => setNewKeyName(event.currentTarget.value)} placeholder={d.keys.createPlaceholder} />
+                </label>
+              </div>
+
+              <div className="data-table management-table key-management-table">
+                <div className="table-row table-head">
+                  <span>{d.keys.created}</span>
+                  <span>{d.keys.create}</span>
+                  <span>API Key</span>
+                  <span>{d.keys.group}</span>
+                  <span>{d.keys.quota}</span>
+                  <span>{d.keys.rateLimit}</span>
+                  <span>{d.keys.expires}</span>
+                  <span>{d.keys.lastUsed}</span>
+                  <span>{d.requests.status}</span>
+                  <span>{locale === "zh" ? "操作" : "Actions"}</span>
+                </div>
+                {visibleKeys.length > 0 ? visibleKeys.map((item) => (
+                  <div className="table-row" key={item.id}>
+                    <span>{item.created}</span>
+                    <strong className="key-name-cell">
+                      {item.name}
+                      {item.ipRestricted && <ShieldCheck size={14} />}
+                    </strong>
+                    <code>{item.maskedSecret || maskKey(item.secret)}</code>
+                    <span>{item.scope || "-"}</span>
+                    <span className="quota-stack">
+                      <strong>{item.quotaUsd > 0 ? item.quota : d.keys.noLimit}</strong>
+                      {item.quotaUsd > 0 && (
+                        <span className="usage-track" aria-label={`${d.keys.usage} ${item.usage}%`}>
+                          <span style={{ width: `${item.usage}%` }} />
+                        </span>
+                      )}
+                    </span>
+                    <span className="rate-stack">
+                      {item.rateLimit5h > 0 && <small>5h {formatUsd(item.usage5h, 2)}/{formatUsd(item.rateLimit5h, 2)}</small>}
+                      {item.rateLimit1d > 0 && <small>1d {formatUsd(item.usage1d, 2)}/{formatUsd(item.rateLimit1d, 2)}</small>}
+                      {item.rateLimit7d > 0 && <small>7d {formatUsd(item.usage7d, 2)}/{formatUsd(item.rateLimit7d, 2)}</small>}
+                      {item.rateLimit5h <= 0 && item.rateLimit1d <= 0 && item.rateLimit7d <= 0 && <small>{d.keys.noLimit}</small>}
+                    </span>
+                    <span>{item.expiresAt || d.keys.never}</span>
+                    <span>{item.lastUsed}</span>
+                    <span className={`status-badge status-${item.status}`}>{getStatusLabel(item.status, copy)}</span>
+                    <span className="row-actions">
                       <button type="button" onClick={() => copyKey(item)} title={d.keys.copy}>
-                        <Copy size={16} />
+                        {copiedKeyId === item.id ? <CheckCircle2 size={15} /> : <Copy size={15} />}
                         <span>{copiedKeyId === item.id ? d.keys.copied : d.keys.copy}</span>
                       </button>
-                      <button type="button" onClick={() => rotateKey(item.id)} title={d.keys.rotate}>
-                        <RefreshCw size={16} />
-                        <span>{d.keys.rotate}</span>
+                      <button type="button" onClick={() => copyKey(item)} title={d.keys.use}>
+                        <Terminal size={15} />
+                        <span>{d.keys.use}</span>
                       </button>
-                      <button type="button" onClick={() => toggleKeyStatus(item.id)}>
-                        <Bell size={16} />
+                      <button type="button" disabled={busyKeyId === item.id} onClick={() => toggleKeyStatus(item.id)}>
+                        {item.status === "active" ? <Ban size={15} /> : <CheckCircle2 size={15} />}
                         <span>{item.status === "active" ? d.keys.disable : d.keys.enable}</span>
                       </button>
-                    </div>
-                  </article>
-                )) : <p className="empty-state">{locale === "zh" ? "暂无 Key，点击上方按钮创建。" : "No keys yet. Create one above."}</p>}
+                      <button type="button" disabled={busyKeyId === item.id} onClick={() => renameKey(item)}>
+                        <Bell size={15} />
+                        <span>{d.keys.rename}</span>
+                      </button>
+                      <button type="button" disabled={busyKeyId === item.id} onClick={() => deleteKey(item)}>
+                        <Trash2 size={15} />
+                        <span>{d.keys.delete}</span>
+                      </button>
+                    </span>
+                  </div>
+                )) : <p className="empty-state">{locale === "zh" ? "暂无匹配的 Key。" : "No matching keys."}</p>}
               </div>
             </motion.div>
           )}
 
           {activeSection === "requests" && (
             <motion.div key="requests" className="dashboard-content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <SectionHeading title={d.requests.title} subtitle={d.requests.subtitle} />
-              <div className="data-table request-table">
+              <SectionHeading title={d.requests.title} subtitle={d.requests.subtitle}>
+                <button className="section-action" type="button" onClick={refreshUsageRecords} disabled={requestLoading}>
+                  <RefreshCw size={17} className={requestLoading ? "spin-icon" : ""} />
+                  <span>{d.requests.refresh}</span>
+                </button>
+              </SectionHeading>
+
+              <section className="usage-summary-grid">
+                <MetricCard icon={History} label={d.requests.status} value={formatTokenCount(usageSummary.totalRequests)} tone="neutral" />
+                <MetricCard icon={Zap} label={d.requests.tokens} value={formatTokenCount(usageSummary.totalTokens)} tone="green" />
+                <MetricCard icon={Banknote} label={d.requests.cost} value={formatUsd(usageSummary.totalActualCost, 4)} tone="gold" />
+                <MetricCard icon={Clock} label={d.requests.latency} value={formatDuration(usageSummary.averageDurationMs)} tone="rose" />
+              </section>
+
+              <div className="request-filter-strip">
+                <select value={requestKeyFilter} onChange={(event) => setRequestKeyFilter(event.currentTarget.value)} aria-label={d.requests.allKeys}>
+                  <option value="">{d.requests.allKeys}</option>
+                  {keys.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+                <label>
+                  <span>{d.requests.startDate}</span>
+                  <input type="date" value={requestStartDate} onChange={(event) => setRequestStartDate(event.currentTarget.value)} />
+                </label>
+                <label>
+                  <span>{d.requests.endDate}</span>
+                  <input type="date" value={requestEndDate} onChange={(event) => setRequestEndDate(event.currentTarget.value)} />
+                </label>
+              </div>
+
+              <div className="data-table request-table request-records-table">
                 <div className="table-row table-head">
                   <span>{d.requests.time}</span>
+                  <span>{d.requests.key}</span>
                   <span>{d.requests.model}</span>
                   <span>{d.requests.endpoint}</span>
-                  <span>{d.requests.key}</span>
+                  <span>{d.requests.type}</span>
                   <span>{d.requests.status}</span>
                   <span>{d.requests.tokens}</span>
                   <span>{d.requests.cost}</span>
                   <span>{d.requests.latency}</span>
+                  <span>{d.requests.firstToken}</span>
+                  <span>{d.requests.userAgent}</span>
                 </div>
                 {requestItems.length > 0 ? requestItems.map((item) => (
                   <div className="table-row" key={item.id}>
-                    <span>{item.time}</span>
+                    <span>{formatDateTime(item.createdAt)}</span>
+                    <span>{item.keyName}</span>
                     <strong>{item.model}</strong>
                     <code>{item.endpoint}</code>
-                    <span>{item.keyName}</span>
-                    <span className={item.status === "200" ? "status-ok" : "status-warn"}>{item.status}</span>
-                    <span>{item.tokens}</span>
-                    <span>{item.cost}</span>
+                    <span className="type-chip">{item.requestType}</span>
+                    <span className={item.statusCode >= 200 && item.statusCode < 400 ? "status-ok" : "status-warn"}>{item.status}</span>
+                    <span className="token-stack">
+                      <strong>{item.tokens}</strong>
+                      <small>{d.requests.input} {item.inputTokens} · {d.requests.output} {item.outputTokens} · {d.requests.cache} {item.cacheTokens}</small>
+                    </span>
+                    <span className="cost-stack">
+                      <strong>{item.cost}</strong>
+                      <small>{item.billingMode}</small>
+                    </span>
                     <span>{item.latency}</span>
+                    <span>{item.firstToken}</span>
+                    <span className="user-agent-cell">{item.userAgent}</span>
                   </div>
                 )) : <p className="empty-state">{locale === "zh" ? "暂无使用记录。" : "No usage records yet."}</p>}
               </div>
@@ -1213,39 +1816,68 @@ function DashboardPage({
           {activeSection === "recharge" && (
             <motion.div key="recharge" className="dashboard-content" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
               <SectionHeading title={d.recharge.title} subtitle={d.recharge.subtitle} />
-              <section className="recharge-layout">
+              <section className="recharge-layout friendly-recharge">
                 <article className="dashboard-panel recharge-summary">
                   <span>{d.recharge.balance}</span>
                   <strong>¥{currencyFormatter.format(balance)}</strong>
-                  <p>{rechargeStatus || selectedPackage.bonus}</p>
+                  <p>{rechargeStatus || checkoutInfo.helpText || selectedPackage.bonus}</p>
                   <div className="selected-package">
-                    <span>{selectedPackage.label}</span>
-                    <strong>¥{selectedPackage.amount}</strong>
+                    <span>{d.recharge.credited}</span>
+                    <strong>¥{currencyFormatter.format(creditedAmount)}</strong>
                   </div>
                 </article>
                 <article className="dashboard-panel recharge-checkout">
                   <div className="checkout-heading">
-                    <span>{d.recharge.submit}</span>
-                    <strong>¥{selectedPackage.amount}</strong>
+                    <span>{d.recharge.payAmount}</span>
+                    <strong>¥{currencyFormatter.format(payAmount)}</strong>
+                  </div>
+                  <div className="amount-entry">
+                    <label>
+                      <span>{d.recharge.amount}</span>
+                      <input type="number" min={checkoutInfo.globalMin || 1} max={checkoutInfo.globalMax || undefined} step="1" value={rechargeAmount} onChange={(event) => setRechargeAmount(Number(event.currentTarget.value))} />
+                    </label>
+                    {amountError && <p className="form-hint is-warning">{amountError}</p>}
                   </div>
                   <div className="recharge-options">
                     {d.recharge.packages.map((item) => (
-                      <button className={selectedPackageId === item.id ? "is-active" : ""} type="button" key={item.id} onClick={() => setSelectedPackageId(item.id)}>
+                      <button className={selectedPackageId === item.id ? "is-active" : ""} type="button" key={item.id} onClick={() => { setSelectedPackageId(item.id); setRechargeAmount(item.amount); }}>
                         <strong>¥{item.amount}</strong>
                         <span>{item.label}</span>
                         <small>{item.bonus}</small>
                       </button>
                     ))}
                   </div>
-                  <div className="payment-methods" aria-label={d.recharge.method}>
+                  <div className="payment-method-grid" aria-label={d.recharge.method}>
                     {methodOptions.map((method) => (
-                      <button className={paymentMethod === method.methodCode ? "is-active" : ""} type="button" key={method.methodCode} onClick={() => setPaymentMethod(method.methodCode)}>
-                        <CreditCard size={17} />
-                        <span>{method.methodName}</span>
+                      <button className={paymentMethod === method.methodCode ? "is-active" : ""} type="button" key={method.methodCode} onClick={() => setPaymentMethod(method.methodCode)} disabled={method.available === false}>
+                        {(() => {
+                          const Icon = getPaymentMethodIcon(method.methodCode);
+                          return <Icon size={19} />;
+                        })()}
+                        <span>{getPaymentMethodLabel(method.methodCode, locale)}</span>
+                        <small>
+                          {method.singleMin || method.singleMax
+                            ? `¥${Number(method.singleMin ?? 0).toFixed(0)}-${method.singleMax ? `¥${Number(method.singleMax).toFixed(0)}` : "∞"}`
+                            : d.keys.noLimit}
+                        </small>
                       </button>
                     ))}
                   </div>
-                  <button className="wide-action" type="button" onClick={submitRecharge}>
+                  <div className="checkout-summary">
+                    <div>
+                      <span>{d.recharge.amount}</span>
+                      <strong>¥{currencyFormatter.format(rechargeAmount)}</strong>
+                    </div>
+                    <div>
+                      <span>{d.recharge.fee}{checkoutInfo.rechargeFeeRate > 0 ? ` ${checkoutInfo.rechargeFeeRate}%` : ""}</span>
+                      <strong>¥{currencyFormatter.format(feeAmount)}</strong>
+                    </div>
+                    <div>
+                      <span>{d.recharge.method}</span>
+                      <strong>{selectedMethod ? getPaymentMethodLabel(selectedMethod.methodCode, locale) : "-"}</strong>
+                    </div>
+                  </div>
+                  <button className="wide-action" type="button" onClick={submitRecharge} disabled={Boolean(amountError) || checkoutInfo.balanceDisabled || !selectedMethod}>
                     <Banknote size={18} />
                     <span>{d.recharge.submit}</span>
                   </button>
@@ -1517,7 +2149,10 @@ function AuthPanel({
                   placeholder={field.placeholder}
                   autoComplete={autoComplete}
                   value={formValues[id]}
-                  onChange={(event) => setFormValues((current) => ({ ...current, [id]: event.currentTarget.value }))}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    setFormValues((current) => ({ ...current, [id]: value }));
+                  }}
                 />
               </div>
             </label>

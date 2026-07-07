@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -111,6 +111,7 @@ function normalizeModel(model: THREE.Object3D, targetHeight: number) {
 function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const modeRef = useRef(mode);
+  const [sceneUnavailable, setSceneUnavailable] = useState(false);
 
   useEffect(() => {
     modeRef.current = mode;
@@ -121,13 +122,20 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
     if (!host) return;
     const config = mascotConfigs[mascot];
     host.dataset.robotStatus = "initializing";
+    setSceneUnavailable(false);
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: "high-performance",
-      preserveDrawingBuffer: true
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance"
+      });
+    } catch {
+      host.dataset.robotStatus = "unsupported";
+      setSceneUnavailable(true);
+      return;
+    }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
@@ -135,6 +143,12 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.setClearColor(0x050607, 0);
     host.appendChild(renderer.domElement);
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      host.dataset.robotStatus = "context-lost";
+      setSceneUnavailable(true);
+    };
+    renderer.domElement.addEventListener("webglcontextlost", handleContextLost, false);
 
     const scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x080a0d, 6.2, 11);
@@ -272,8 +286,13 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
       camera.updateProjectionMatrix();
     };
 
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(host);
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(updateSize);
+      resizeObserver.observe(host);
+    } else {
+      window.addEventListener("resize", updateSize, { passive: true });
+    }
     updateSize();
 
     const handlePointer = (event: PointerEvent) => {
@@ -291,43 +310,16 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
     window.addEventListener("pointermove", handlePointer, { passive: true });
     window.addEventListener("pointerdown", handlePointerDown, { passive: true });
 
-    const samplePixels = () => {
-      const gl = renderer.getContext();
-      const pixels = new Uint8Array(4 * 25);
-      let nonDark = 0;
-      let total = 0;
-      const samplePoints = [
-        [0.62, 0.22],
-        [0.68, 0.34],
-        [0.72, 0.5],
-        [0.78, 0.64],
-        [0.68, 0.78]
-      ];
-
-      samplePoints.forEach(([px, py]) => {
-        const x = Math.max(0, Math.floor(renderer.domElement.width * px));
-        const y = Math.max(0, Math.floor(renderer.domElement.height * (1 - py)));
-        gl.readPixels(x, y, 5, 5, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-        for (let index = 0; index < pixels.length; index += 4) {
-          const value = pixels[index] + pixels[index + 1] + pixels[index + 2];
-          total += value;
-          if (value > 12) nonDark += 1;
-        }
-      });
-
-      return {
-        nonDark,
-        avgRgbSum: Math.round(total / ((pixels.length / 4) * samplePoints.length)),
-        width: renderer.domElement.width,
-        height: renderer.domElement.height
-      };
-    };
-
     const probe = () => ({
       frame,
       headYaw: modelRoot.rotation.y,
       rootYaw: root.rotation.y,
-      sample: samplePixels()
+      sample: {
+        nonDark: 0,
+        avgRgbSum: 0,
+        width: renderer.domElement.width,
+        height: renderer.domElement.height
+      }
     });
     window.__codiumRobotProbe = probe;
 
@@ -373,13 +365,6 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
       host.dataset.robotFrame = String(frame);
       host.dataset.robotHeadYaw = modelRoot.rotation.y.toFixed(4);
       host.dataset.robotRootYaw = root.rotation.y.toFixed(4);
-      if (frame % 30 === 0) {
-        const sample = samplePixels();
-        host.dataset.robotNonDark = String(sample.nonDark);
-        host.dataset.robotAvgRgb = String(sample.avgRgbSum);
-        host.dataset.robotPixels = `${sample.width}x${sample.height}`;
-      }
-
       animationId = requestAnimationFrame(animate);
     };
 
@@ -388,17 +373,16 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
     return () => {
       isDisposed = true;
       cancelAnimationFrame(animationId);
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
+      if (!resizeObserver) window.removeEventListener("resize", updateSize);
       window.removeEventListener("pointermove", handlePointer);
       window.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("webglcontextlost", handleContextLost);
       if (window.__codiumRobotProbe === probe) window.__codiumRobotProbe = undefined;
       delete host.dataset.robotStatus;
       delete host.dataset.robotFrame;
       delete host.dataset.robotHeadYaw;
       delete host.dataset.robotRootYaw;
-      delete host.dataset.robotNonDark;
-      delete host.dataset.robotAvgRgb;
-      delete host.dataset.robotPixels;
       renderer.dispose();
       scene.traverse((object) => {
         const mesh = object as THREE.Mesh;
@@ -407,11 +391,13 @@ function RobotScene({ mode, mascot }: { mode: RobotMode; mascot: MascotVariant }
         if (Array.isArray(material)) material.forEach((item) => item.dispose());
         else if (material) material.dispose();
       });
-      host.removeChild(renderer.domElement);
+      if (renderer.domElement.parentElement === host) {
+        host.removeChild(renderer.domElement);
+      }
     };
   }, [mascot]);
 
-  return <div ref={hostRef} className={`robot-stage robot-stage-${mode} robot-stage-${mascot}`} aria-hidden="true" />;
+  return <div ref={hostRef} className={`robot-stage robot-stage-${mode} robot-stage-${mascot}${sceneUnavailable ? " robot-stage-fallback" : ""}`} aria-hidden="true" />;
 }
 
 export default RobotScene;

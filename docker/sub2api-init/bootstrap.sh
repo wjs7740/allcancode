@@ -64,7 +64,7 @@ curl -fsS -X POST "${SUB2API_URL}/api/v1/admin/compliance/accept" \
   -d "$COMPLIANCE_PAYLOAD" >/dev/null
 
 PROVIDERS_RESPONSE=$(curl -fsS "${SUB2API_URL}/api/v1/admin/payment/providers" -H "Authorization: Bearer ${ADMIN_TOKEN}")
-PROVIDER_ID=$(printf '%s' "$PROVIDERS_RESPONSE" | jq -r '.data[]? | select(.provider_key == "easypay" and (.name == "Kyren EasyPay" or .name == "Local EasyPay Mock")) | .id' | head -n 1)
+PROVIDER_ID=$(printf '%s' "$PROVIDERS_RESPONSE" | jq -r --arg name "$KYREN_PROVIDER_NAME" '.data[]? | select(.provider_key == "easypay" and (.name == $name or .name == "Kyren EasyPay" or .name == "Local EasyPay Mock")) | .id' | head -n 1)
 
 PROVIDER_PAYLOAD=$(jq -nc \
   --arg name "$KYREN_PROVIDER_NAME" \
@@ -117,7 +117,7 @@ upsert_setting "ENABLED_PAYMENT_TYPES" "$KYREN_PAYMENT_TYPES"
 upsert_setting "BALANCE_PAYMENT_DISABLED" "false"
 upsert_setting "BALANCE_RECHARGE_MULTIPLIER" "1.00"
 upsert_setting "RECHARGE_FEE_RATE" "0.00"
-upsert_setting "PAYMENT_HELP_TEXT" "Kyren EasyPay is enabled. Configure KYREN_EASYPAY_API_BASE, KYREN_EASYPAY_PID and KYREN_EASYPAY_PKEY for production."
+upsert_setting "PAYMENT_HELP_TEXT" "Kyren EasyPay is enabled with alipay, wxpay, creditcard, crypto and paynow. Configure KYREN_EASYPAY_API_BASE, KYREN_EASYPAY_PID and KYREN_EASYPAY_PKEY for production."
 upsert_setting "payment_visible_method_alipay_enabled" "true"
 upsert_setting "payment_visible_method_alipay_source" "easypay_alipay"
 upsert_setting "payment_visible_method_wxpay_enabled" "true"
